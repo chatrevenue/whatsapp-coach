@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body: OptimizeRequest = await req.json();
-    const { message, history = [], industry = 'autohaus' } = body;
+    const body: OptimizeRequest & { goal?: string; tone?: string } = await req.json();
+    const { message, history = [], industry = 'autohaus', goal, tone } = body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ error: 'Bitte gib eine Nachricht ein.' }, { status: 400 });
@@ -79,9 +79,29 @@ export async function POST(req: NextRequest) {
       andere: 'ein Unternehmen',
     };
 
+    const goalLabels: Record<string, string> = {
+      verkauf: 'Verkauf',
+      erinnerung: 'Erinnerung',
+      event: 'Event/Einladung',
+      followup: 'Follow-up',
+    };
+
+    const toneLabels: Record<string, string> = {
+      locker: 'Locker & entspannt',
+      freundlich: 'Freundlich & herzlich',
+      verkaufsstark: 'Verkaufsstark & überzeugend',
+    };
+
+    const contextLines = [
+      `Optimiere diese WhatsApp-Nachricht für ${industryLabels[industry] ?? 'ein Unternehmen'}:`,
+      goal ? `ZIEL: ${goalLabels[goal] ?? goal}` : null,
+      tone ? `TON: ${toneLabels[tone] ?? tone}` : null,
+      `OPTIMIERE: "${message.trim()}"`,
+    ].filter(Boolean).join('\n');
+
     messages.push({
       role: 'user',
-      content: `Optimiere diese WhatsApp-Nachricht für ${industryLabels[industry] ?? 'ein Unternehmen'}:\n\n"${message.trim()}"`,
+      content: contextLines,
     });
 
     const response = await client.messages.create({

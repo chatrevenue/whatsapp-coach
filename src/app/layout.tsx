@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
-  title: 'WhatsApp KI-Coach | Mehr Antworten für Autohäuser',
-  description: 'KI optimiert deine WhatsApp-Nachrichten für maximale Rücklaufquoten. Speziell für Autohäuser entwickelt.',
-  keywords: 'WhatsApp Marketing, Autohaus, KI, Künstliche Intelligenz, Nachrichten optimieren',
+  title: 'WhatsApp Message Optimizer | Better messages in seconds',
+  description: 'KI optimiert deine WhatsApp-Nachrichten für maximale Rücklaufquoten. Für Autohäuser, Restaurants, Fitnessstudios und mehr.',
+  keywords: 'WhatsApp Marketing, KI, Künstliche Intelligenz, Nachrichten optimieren, Message Optimizer',
   openGraph: {
-    title: 'WhatsApp KI-Coach für Autohäuser',
-    description: 'Mehr Antworten durch KI-optimierte WhatsApp-Nachrichten',
+    title: 'WhatsApp Message Optimizer',
+    description: 'Better messages in seconds',
     type: 'website',
   },
   icons: {
@@ -21,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de">
-      <body className="bg-white text-gray-900 antialiased">
+    <html lang="de" className={inter.variable}>
+      <body className="bg-[#0F1117] text-[#F1F5F9] antialiased min-h-screen">
         {children}
       </body>
     </html>

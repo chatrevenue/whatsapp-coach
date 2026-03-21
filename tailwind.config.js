@@ -8,6 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        wa: {
+          green: '#25D366',
+          'green-dark': '#1DA851',
+          bg: '#0F1117',
+          secondary: '#1A1D27',
+          card: '#1E2130',
+          border: '#2D3348',
+          bubble: '#1E7E34',
+        },
+        // legacy compat
         whatsapp: {
           green: '#25D366',
           'green-dark': '#128C7E',
@@ -19,7 +29,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
