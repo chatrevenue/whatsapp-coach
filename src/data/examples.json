@@ -1,0 +1,142 @@
+[
+  {
+    "id": "fallback-auto-1",
+    "industry": "autohaus",
+    "occasion": "Frühlingscheck",
+    "message": "🌸 Frühlingscheck für dein Auto! Sicherheit + Leistung – jetzt nur 49€. Termin in 24h verfügbar 👇",
+    "quick_replies": ["Termin buchen", "Mehr Infos", "Preis ansehen"],
+    "auto_responses": [
+      "Super! Ich schicke dir gleich unsere freien Termine. Wann passt es dir?",
+      "Beim Frühlingscheck prüfen wir: Bremsen, Reifen, Öl, Beleuchtung & mehr. Alles für 49€.",
+      "Der Preis gilt bis Ende April. Soll ich dir einen Termin reservieren?"
+    ],
+    "stats": {
+      "openRate": 68,
+      "responseRate": 34,
+      "sentCount": 215,
+      "notes": "Sehr gute Performance im März"
+    },
+    "createdAt": "2024-03-01T10:00:00Z",
+    "updatedAt": "2024-03-15T12:00:00Z"
+  },
+  {
+    "id": "fallback-auto-2",
+    "industry": "autohaus",
+    "occasion": "Gebrauchtwagen Nachfass",
+    "message": "Hey! Das Fahrzeug, das du dir angeschaut hast, ist noch da 🚗 – aber nicht mehr lange. Interesse?",
+    "quick_replies": ["Ja, noch da?", "Probefahrt", "Kein Interesse"],
+    "auto_responses": [
+      "Ja! Das Fahrzeug ist noch verfügbar. Soll ich dir die aktuellen Details schicken?",
+      "Wann möchtest du zur Probefahrt vorbeikommen? Wir haben morgen noch freie Slots.",
+      "Kein Problem! Falls du doch noch Fragen hast, melde dich einfach."
+    ],
+    "stats": {
+      "openRate": 72,
+      "responseRate": 41,
+      "sentCount": 180,
+      "notes": "Top-Performer für Nachfass-Nachrichten"
+    },
+    "createdAt": "2024-02-15T09:00:00Z",
+    "updatedAt": "2024-02-20T14:00:00Z"
+  },
+  {
+    "id": "fallback-restaurant-1",
+    "industry": "restaurant",
+    "occasion": "Mittagsmenü",
+    "message": "😋 Heute: Frisch gemachte Pasta mit Trüffel – nur 12,90€! Tisch noch frei für 12:30 Uhr 🍽️",
+    "quick_replies": ["Tisch reservieren", "Menü ansehen", "Mehr Infos"],
+    "auto_responses": [
+      "Perfekt! Ich reserviere dir einen Tisch für 12:30 Uhr. Wie viele Personen?",
+      "Heute gibt es: Pasta al Tartufo, Risotto Parmigiano & Tiramisu zum Dessert.",
+      "Heute haben wir bis 14:00 Uhr Mittagszeit. Reservierung empfohlen!"
+    ],
+    "stats": {
+      "openRate": 61,
+      "responseRate": 29,
+      "sentCount": 150,
+      "notes": "Dienstags besonders erfolgreich"
+    },
+    "createdAt": "2024-03-05T08:00:00Z",
+    "updatedAt": "2024-03-10T16:00:00Z"
+  },
+  {
+    "id": "fallback-restaurant-2",
+    "industry": "restaurant",
+    "occasion": "Abendreservierung",
+    "message": "🔥 Freitagabend – noch 2 Tische frei! Unser Küchenchef empfiehlt heute das Wagyu-Steak ✨",
+    "quick_replies": ["Jetzt reservieren", "Speisekarte", "Anrufen"],
+    "auto_responses": [
+      "Toll! Für Freitagabend haben wir noch 20:00 und 20:30 Uhr frei. Welche Zeit?",
+      "Die aktuelle Speisekarte schicke ich dir jetzt zu. Was ist dein Lieblingsgang?",
+      "Du erreichst uns unter 0211-123456. Wir freuen uns auf deinen Anruf!"
+    ],
+    "stats": {
+      "openRate": 58,
+      "responseRate": 27,
+      "sentCount": 95,
+      "notes": "Freitagsnachrichten performen gut"
+    },
+    "createdAt": "2024-03-08T10:00:00Z",
+    "updatedAt": "2024-03-12T18:00:00Z"
+  },
+  {
+    "id": "fallback-fitness-1",
+    "industry": "fitnessstudio",
+    "occasion": "Schnupperkurs",
+    "message": "💪 Dein erster Schritt zur Transformation! Kostenloser Schnupperkurs diese Woche – nur 3 Plätze frei ⚡",
+    "quick_replies": ["Platz sichern", "Mehr erfahren", "Später"],
+    "auto_responses": [
+      "Klasse! Ich halte dir einen Platz frei. Wann möchtest du vorbeikommen?",
+      "Der Kurs dauert 60 Min. und umfasst Kraft, Ausdauer und Core-Training. Alles inkl.!",
+      "Kein Problem! Der Kurs läuft auch nächste Woche noch. Melde dich einfach."
+    ],
+    "stats": {
+      "openRate": 65,
+      "responseRate": 38,
+      "sentCount": 120,
+      "notes": "Sehr gute Conversion zu Mitgliedschaften"
+    },
+    "createdAt": "2024-03-03T07:00:00Z",
+    "updatedAt": "2024-03-18T09:00:00Z"
+  },
+  {
+    "id": "fallback-fitness-2",
+    "industry": "fitnessstudio",
+    "occasion": "Angebot Mitgliedschaft",
+    "message": "🏋️ Sommer-Special: 3 Monate zum Preis von 2! Nur bis Sonntag. 200+ Mitglieder haben schon zugeschlagen 🔥",
+    "quick_replies": ["Angebot sichern", "Details ansehen", "Frage stellen"],
+    "auto_responses": [
+      "Perfekt! Das Angebot gilt nur bis Sonntag um Mitternacht. Soll ich dir alles durchschicken?",
+      "Inklusive: Unbegrenzt Training, Kurse, Sauna & Personal Trainer Erstgespräch.",
+      "Kein Problem! Was möchtest du wissen? Ich helfe dir gerne."
+    ],
+    "stats": {
+      "openRate": 71,
+      "responseRate": 45,
+      "sentCount": 200,
+      "notes": "Beste Conversion-Rate aller Fitness-Nachrichten"
+    },
+    "createdAt": "2024-03-10T08:00:00Z",
+    "updatedAt": "2024-03-20T12:00:00Z"
+  },
+  {
+    "id": "fallback-andere-1",
+    "industry": "andere",
+    "occasion": "Allgemeines Angebot",
+    "message": "✨ Exklusiv für dich: 20% Rabatt auf deine nächste Bestellung! Nur 48 Stunden gültig 👇",
+    "quick_replies": ["Jetzt einlösen", "Mehr Infos", "Teilen"],
+    "auto_responses": [
+      "Super! Dein persönlicher Rabattcode: SAVE20. Einfach im Checkout eingeben.",
+      "Das Angebot gilt für alle Produkte in unserem Shop. Was interessiert dich?",
+      "Teile es mit Freunden – sie sparen auch 20%! Danke für deine Treue."
+    ],
+    "stats": {
+      "openRate": 55,
+      "responseRate": 22,
+      "sentCount": 85,
+      "notes": "Solide für allgemeine Kampagnen"
+    },
+    "createdAt": "2024-03-15T11:00:00Z",
+    "updatedAt": "2024-03-15T11:00:00Z"
+  }
+]

@@ -3,12 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import WhatsAppBubble from './WhatsAppBubble';
 import QuickReplies from './QuickReplies';
+import AutoResponses from './AutoResponses';
+import CopyButton from './CopyButton';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   optimized_message?: string;
   quick_replies?: string[];
+  auto_responses?: string[];
   tip?: string;
   timestamp: string;
 }
@@ -32,16 +35,16 @@ export default function ResultSection({ messages, isLoading, onFollowUp }: Resul
     const toSend = (text || followUp).trim();
     if (!toSend || isLoading) return;
 
-    // Build history from current messages
     const history = messages.map((m) => ({
       role: m.role,
-      content: m.role === 'assistant' && m.optimized_message
-        ? JSON.stringify({
-            optimized_message: m.optimized_message,
-            quick_replies: m.quick_replies,
-            tip: m.tip,
-          })
-        : m.content,
+      content:
+        m.role === 'assistant' && m.optimized_message
+          ? JSON.stringify({
+              optimized_message: m.optimized_message,
+              quick_replies: m.quick_replies,
+              tip: m.tip,
+            })
+          : m.content,
     }));
 
     onFollowUp(toSend, history);
@@ -90,9 +93,6 @@ export default function ResultSection({ messages, isLoading, onFollowUp }: Resul
         {/* Messages */}
         <div
           className="px-3 py-4 space-y-3 min-h-[200px] max-h-[500px] overflow-y-auto"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23E5DDD5'/%3E%3C/svg%3E")`,
-          }}
         >
           {messages.map((msg, idx) => (
             <div key={idx}>
@@ -100,8 +100,8 @@ export default function ResultSection({ messages, isLoading, onFollowUp }: Resul
                 message={msg.role === 'user' ? msg.content : (msg.optimized_message || msg.content)}
                 isUser={msg.role === 'user'}
                 timestamp={msg.timestamp}
+                showCopy={msg.role === 'assistant'}
               />
-              {/* Show quick replies after last assistant message */}
               {msg.role === 'assistant' &&
                 msg.quick_replies &&
                 idx === messages.length - 1 &&
@@ -109,12 +109,12 @@ export default function ResultSection({ messages, isLoading, onFollowUp }: Resul
                   <QuickReplies
                     replies={msg.quick_replies}
                     onSelect={(reply) => handleSend(reply)}
+                    showCopy={true}
                   />
                 )}
             </div>
           ))}
 
-          {/* Loading bubble */}
           {isLoading && (
             <WhatsAppBubble
               message=""
@@ -174,21 +174,18 @@ export default function ResultSection({ messages, isLoading, onFollowUp }: Resul
         </div>
       )}
 
-      {/* Copy button */}
+      {/* Auto-responses */}
+      {lastAssistantMsg?.auto_responses && lastAssistantMsg.auto_responses.length > 0 && !isLoading && (
+        <AutoResponses
+          responses={lastAssistantMsg.auto_responses}
+          quickReplies={lastAssistantMsg.quick_replies}
+        />
+      )}
+
+      {/* Copy full message button */}
       {lastAssistantMsg?.optimized_message && !isLoading && (
         <div className="mt-3 flex justify-end">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(lastAssistantMsg.optimized_message!);
-            }}
-            className="
-              inline-flex items-center gap-2 px-4 py-2 rounded-lg
-              bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium
-              active:scale-95 transition-all
-            "
-          >
-            📋 Nachricht kopieren
-          </button>
+          <CopyButton text={lastAssistantMsg.optimized_message} size="md" />
         </div>
       )}
     </section>

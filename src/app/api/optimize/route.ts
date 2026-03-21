@@ -1,49 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { buildSystemPrompt } from '@/lib/system-prompts';
+import { getTopExamples } from '@/lib/kv';
+import type { Industry, OptimizeRequest, OptimizeResponse } from '@/lib/types';
 
-const SYSTEM_PROMPT = `Du bist ein WhatsApp Marketing Experte für Autohäuser.
-
-OPTIMIERUNGSREGELN:
-- Hook in ersten 3 Sekunden (Neugier wecken)
-- Einzigartiger Wert (warum jetzt antworten?)
-- Persönlicher Ton (duzen, warm)
-- Max 100-150 Zeichen pro Nachricht
-- Ein klarer CTA (Call-to-Action)
-- Emojis strategisch einsetzen (nicht übertreiben)
-
-FRAMEWORK (Hormozi):
-1. Hook (Problem oder Neugier)
-2. Agitation (Schmerz verstärken)
-3. Solution (einfache Lösung zeigen)
-4. CTA (konkreter nächster Schritt)
-
-QUICK-REPLY REGELN:
-- Max 20 Zeichen pro Button
-- Genau 3 Buttons vorschlagen
-- Praktisch und klickbar
-
-AUSGABE IMMER als valides JSON:
-{
-  "optimized_message": "optimierter Text hier",
-  "quick_replies": ["Button 1", "Button 2", "Button 3"],
-  "tip": "kurzer Tipp warum diese Version besser ist"
-}`;
-
-export interface MessageHistory {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export interface OptimizeRequest {
-  message: string;
-  history?: MessageHistory[];
-}
-
-export interface OptimizeResponse {
-  optimized_message: string;
-  quick_replies: string[];
-  tip: string;
-}
+export { type OptimizeRequest, type OptimizeResponse };
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -67,13 +28,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body: OptimizeRequest = await req.json();
-    const { message, history = [] } = body;
+    const { message, history = [], industry = 'autohaus' } = body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Bitte gib eine Nachricht ein.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Bitte gib eine Nachricht ein.' }, { status: 400 });
     }
 
     if (message.trim().length > 2000) {
@@ -83,36 +41,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Load top 3 examples for dynamic system prompt
+    const examples = await getTopExamples(industry as Industry, 3);
+    const systemPrompt = buildSystemPrompt(industry, examples);
+
     const client = new Anthropic({ apiKey });
 
-    // Build message history for multi-turn conversation
     const messages: Anthropic.MessageParam[] = [];
 
-    // Add previous history
     for (const msg of history) {
       if (msg.role === 'user' || msg.role === 'assistant') {
-        messages.push({
-          role: msg.role,
-          content: msg.content,
-        });
+        messages.push({ role: msg.role, content: msg.content });
       }
     }
 
-    // Add current user message
+    const industryLabels: Record<string, string> = {
+      autohaus: 'ein Autohaus',
+      restaurant: 'ein Restaurant',
+      fitnessstudio: 'ein Fitnessstudio',
+      andere: 'ein Unternehmen',
+    };
+
     messages.push({
       role: 'user',
-      content: `Optimiere diese WhatsApp-Nachricht für ein Autohaus:\n\n"${message.trim()}"`,
+      content: `Optimiere diese WhatsApp-Nachricht für ${industryLabels[industry] ?? 'ein Unternehmen'}:\n\n"${message.trim()}"`,
     });
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 500,
+      max_tokens: 600,
       temperature: 0.7,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages,
     });
 
-    // Extract text content from response
     const textContent = response.content.find((block) => block.type === 'text');
     if (!textContent || textContent.type !== 'text') {
       throw new Error('Keine Textantwort von der KI erhalten.');
@@ -120,18 +82,16 @@ export async function POST(req: NextRequest) {
 
     const rawText = textContent.text.trim();
 
-    // Parse JSON from response (handle potential markdown code blocks)
     let parsed: OptimizeResponse;
     try {
-      // Strip markdown code blocks if present
-      const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
+      const jsonMatch =
+        rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
       const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText;
       parsed = JSON.parse(jsonStr);
     } catch {
       throw new Error('KI hat kein gültiges JSON zurückgegeben. Bitte nochmal versuchen.');
     }
 
-    // Validate response structure
     if (
       typeof parsed.optimized_message !== 'string' ||
       !Array.isArray(parsed.quick_replies) ||
@@ -140,7 +100,6 @@ export async function POST(req: NextRequest) {
       throw new Error('Unvollständige Antwort von der KI. Bitte nochmal versuchen.');
     }
 
-    // Ensure exactly 3 quick replies, trim to 20 chars
     const quickReplies = parsed.quick_replies
       .slice(0, 3)
       .map((r: string) => String(r).substring(0, 20));
@@ -149,9 +108,14 @@ export async function POST(req: NextRequest) {
       quickReplies.push(['Mehr Info', 'Termin buchen', 'Danke'][quickReplies.length]);
     }
 
+    const autoResponses: string[] = Array.isArray(parsed.auto_responses)
+      ? parsed.auto_responses.slice(0, 3).map((r: string) => String(r))
+      : [];
+
     return NextResponse.json({
       optimized_message: parsed.optimized_message,
       quick_replies: quickReplies,
+      auto_responses: autoResponses,
       tip: parsed.tip,
     });
   } catch (error) {

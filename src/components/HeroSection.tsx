@@ -1,19 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
+import type { Industry } from '@/lib/types';
+
+const EXAMPLE_MESSAGES: Record<Industry, string[]> = {
+  autohaus: [
+    'Hallo Herr Müller, wir haben noch das Fahrzeug welches Sie sich letzten Monat angeschaut haben. Sind Sie noch interessiert?',
+    'Guten Tag, ich wollte mich mal melden wegen Ihres Interesses an unserem Angebot. Haben Sie schon eine Entscheidung getroffen?',
+    'Sehr geehrter Kunde, wir möchten Sie über unsere aktuelle Aktion informieren. Bis Ende des Monats gibt es 10% auf alle Gebrauchtwagen.',
+  ],
+  restaurant: [
+    'Liebe Stammgäste, heute gibt es Pasta mit frischer Trüffelcreme. Tisch noch frei um 19 Uhr.',
+    'Guten Morgen! Unser Tagesmenü ist frisch vorbereitet. Kommen Sie heute zum Mittagessen?',
+    'Wir haben noch Plätze für das Wochenend-Brunch frei. Sichern Sie sich jetzt einen Tisch.',
+  ],
+  fitnessstudio: [
+    'Hallo, wir haben ein neues Angebot für dich. 3 Monate Mitgliedschaft zum Sonderpreis.',
+    'Hey! Du hattest letzten Monat Interesse an einem Kurs. Haben wir noch freie Plätze für dich.',
+    'Hallo, wir haben eine neue Yoga-Klasse gestartet. Willst du dabei sein?',
+  ],
+  andere: [
+    'Guten Tag, wir möchten Sie über unser aktuelles Angebot informieren. Haben Sie Interesse?',
+    'Hallo! Wir haben ein Sonderangebot nur für Sie vorbereitet. Gültig bis Ende der Woche.',
+    'Sehr geehrter Kunde, wir melden uns wegen Ihrer Anfrage. Können wir kurz telefonieren?',
+  ],
+};
 
 interface HeroSectionProps {
   onOptimize: (message: string) => void;
   isLoading: boolean;
+  industry?: Industry;
+  children?: ReactNode;
 }
 
-const EXAMPLE_MESSAGES = [
-  'Hallo Herr Müller, wir haben noch das Fahrzeug welches Sie sich letzten Monat angeschaut haben. Sind Sie noch interessiert?',
-  'Guten Tag, ich wollte mich mal melden wegen Ihres Interesses an unserem Angebot. Haben Sie schon eine Entscheidung getroffen?',
-  'Sehr geehrter Kunde, wir möchten Sie über unsere aktuelle Aktion informieren. Bis Ende des Monats gibt es 10% auf alle Gebrauchtwagen.',
-];
-
-export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps) {
+export default function HeroSection({ onOptimize, isLoading, industry = 'autohaus', children }: HeroSectionProps) {
   const [message, setMessage] = useState('');
   const [charCount, setCharCount] = useState(0);
 
@@ -31,7 +51,8 @@ export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps)
   };
 
   const loadExample = () => {
-    const random = EXAMPLE_MESSAGES[Math.floor(Math.random() * EXAMPLE_MESSAGES.length)];
+    const examples = EXAMPLE_MESSAGES[industry] ?? EXAMPLE_MESSAGES.andere;
+    const random = examples[Math.floor(Math.random() * examples.length)];
     setMessage(random);
     setCharCount(random.length);
   };
@@ -64,10 +85,13 @@ export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps)
           <span className="text-whatsapp-bubble">Weniger ignoriert werden.</span>
         </h1>
 
-        <p className="text-lg text-white/80 text-center mb-10 max-w-xl mx-auto">
+        <p className="text-lg text-white/80 text-center mb-8 max-w-xl mx-auto">
           KI optimiert deine WhatsApp-Nachrichten nach dem Hormozi-Framework –
-          speziell für Autohäuser entwickelt.
+          für jede Branche spezialisiert.
         </p>
+
+        {/* Children (IndustrySelector) */}
+        {children}
 
         {/* Input Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-6">
@@ -85,6 +109,7 @@ export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps)
                 w-full resize-none rounded-xl border-2 border-gray-200
                 focus:border-whatsapp-green p-3 text-gray-800 text-sm
                 placeholder:text-gray-400 transition-colors duration-200
+                outline-none
               "
             />
             <div className="flex items-center justify-between mt-2 mb-4">
@@ -122,9 +147,7 @@ export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps)
                   KI optimiert...
                 </>
               ) : (
-                <>
-                  🚀 Jetzt optimieren
-                </>
+                <>🚀 Jetzt optimieren</>
               )}
             </button>
           </form>
@@ -139,7 +162,7 @@ export default function HeroSection({ onOptimize, isLoading }: HeroSectionProps)
               ))}
             </div>
             <p className="text-xs text-gray-500">
-              <span className="font-semibold text-gray-700">127+ Autohäuser</span> nutzen es bereits
+              <span className="font-semibold text-gray-700">500+ Unternehmen</span> nutzen es bereits
             </p>
           </div>
         </div>
