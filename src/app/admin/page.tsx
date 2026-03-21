@@ -1,22 +1,42 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { MessageExample, Industry } from '@/lib/types';
+import type { MessageExample, Industry, IndustryInstructions, QuickReplyPair } from '@/lib/types';
 import { INDUSTRIES } from '@/lib/types';
+import { calculateScore, getScoreLabel } from '@/lib/scoring';
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 function AuthGate({ onAuth }: { onAuth: (pw: string) => void }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pw.trim()) {
       setError('Bitte Passwort eingeben.');
       return;
     }
-    onAuth(pw.trim());
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw.trim() }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        onAuth(pw.trim());
+      } else {
+        setError(data.error === 'Not configured' ? 'Admin-Passwort nicht konfiguriert.' : 'Falsches Passwort.');
+      }
+    } catch {
+      setError('Verbindungsfehler. Bitte nochmal versuchen.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,9 +58,10 @@ function AuthGate({ onAuth }: { onAuth: (pw: string) => void }) {
           {error && <p className="text-red-500 text-xs">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition-colors"
+            disabled={loading}
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
           >
-            Einloggen
+            {loading ? 'Prüfe...' : 'Einloggen'}
           </button>
         </form>
       </div>
@@ -48,17 +69,16 @@ function AuthGate({ onAuth }: { onAuth: (pw: string) => void }) {
   );
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Example Form Types ───────────────────────────────────────────────────────
 
 interface ExampleFormData {
   industry: Industry;
   occasion: string;
   message: string;
-  quick_replies: string;
-  auto_responses: string;
-  openRate: string;
-  responseRate: string;
-  sentCount: string;
+  quickReplyPairs: QuickReplyPair[];
+  sent: string;
+  opened: string;
+  responded: string;
   notes: string;
 }
 
@@ -66,11 +86,10 @@ const emptyForm = (): ExampleFormData => ({
   industry: 'autohaus',
   occasion: '',
   message: '',
-  quick_replies: '',
-  auto_responses: '',
-  openRate: '',
-  responseRate: '',
-  sentCount: '0',
+  quickReplyPairs: [{ button: '', autoResponse: '' }],
+  sent: '0',
+  opened: '0',
+  responded: '0',
   notes: '',
 });
 
@@ -89,20 +108,51 @@ function ExampleModal({
 }) {
   const [form, setForm] = useState<ExampleFormData>(() => {
     if (!initial) return emptyForm();
+
+    // Build quickReplyPairs from existing data
+    let pairs: QuickReplyPair[] = [];
+    if (initial.quickReplyPairs?.length) {
+      pairs = initial.quickReplyPairs;
+    } else if (initial.quick_replies?.length) {
+      pairs = initial.quick_replies.map((btn, idx) => ({
+        button: btn,
+        autoResponse: initial.auto_responses?.[idx] ?? '',
+      }));
+    }
+    if (!pairs.length) pairs = [{ button: '', autoResponse: '' }];
+
+    const s = initial.stats;
     return {
       industry: initial.industry,
       occasion: initial.occasion,
       message: initial.message,
-      quick_replies: initial.quick_replies.join('\n'),
-      auto_responses: initial.auto_responses.join('\n'),
-      openRate: initial.stats.openRate?.toString() ?? '',
-      responseRate: initial.stats.responseRate?.toString() ?? '',
-      sentCount: initial.stats.sentCount.toString(),
-      notes: initial.stats.notes,
+      quickReplyPairs: pairs,
+      sent: String(s.sent ?? s.sentCount ?? 0),
+      opened: String(s.opened ?? 0),
+      responded: String(s.responded ?? 0),
+      notes: s.notes,
     };
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const updatePair = (idx: number, field: keyof QuickReplyPair, value: string) => {
+    setForm((f) => {
+      const pairs = [...f.quickReplyPairs];
+      pairs[idx] = { ...pairs[idx], [field]: value };
+      return { ...f, quickReplyPairs: pairs };
+    });
+  };
+
+  const addPair = () => {
+    if (form.quickReplyPairs.length >= 3) return;
+    setForm((f) => ({ ...f, quickReplyPairs: [...f.quickReplyPairs, { button: '', autoResponse: '' }] }));
+  };
+
+  const removePair = (idx: number) => {
+    if (form.quickReplyPairs.length <= 1) return;
+    setForm((f) => ({ ...f, quickReplyPairs: f.quickReplyPairs.filter((_, i) => i !== idx) }));
+  };
 
   const handleSave = async () => {
     if (!form.occasion.trim() || !form.message.trim()) {
@@ -112,18 +162,22 @@ function ExampleModal({
     setSaving(true);
     setError('');
 
+    const pairs = form.quickReplyPairs.filter((p) => p.button.trim());
+    const stats = {
+      sent: parseInt(form.sent || '0', 10),
+      opened: parseInt(form.opened || '0', 10),
+      responded: parseInt(form.responded || '0', 10),
+      notes: form.notes,
+    };
+
     const payload = {
       industry: form.industry,
       occasion: form.occasion.trim(),
       message: form.message.trim(),
-      quick_replies: form.quick_replies.split('\n').map((s) => s.trim()).filter(Boolean),
-      auto_responses: form.auto_responses.split('\n').map((s) => s.trim()).filter(Boolean),
-      stats: {
-        openRate: form.openRate ? parseFloat(form.openRate) : null,
-        responseRate: form.responseRate ? parseFloat(form.responseRate) : null,
-        sentCount: parseInt(form.sentCount || '0', 10),
-        notes: form.notes,
-      },
+      quickReplyPairs: pairs,
+      quick_replies: pairs.map((p) => p.button),
+      auto_responses: pairs.map((p) => p.autoResponse),
+      stats,
     };
 
     try {
@@ -155,6 +209,15 @@ function ExampleModal({
       setSaving(false);
     }
   };
+
+  const statsPreview = {
+    sent: parseInt(form.sent || '0', 10),
+    opened: parseInt(form.opened || '0', 10),
+    responded: parseInt(form.responded || '0', 10),
+    notes: form.notes,
+  };
+  const previewScore = calculateScore(statsPreview);
+  const previewLabel = getScoreLabel(previewScore);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -204,66 +267,97 @@ function ExampleModal({
             />
           </div>
 
-          {/* Quick Replies */}
+          {/* Quick-Reply Paare */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Quick-Reply Buttons (je Zeile, max 20 Zeichen)</label>
-            <textarea
-              value={form.quick_replies}
-              onChange={(e) => setForm({ ...form, quick_replies: e.target.value })}
-              rows={3}
-              placeholder={"Termin buchen\nMehr Infos\nKein Interesse"}
-              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none font-mono"
-            />
-          </div>
-
-          {/* Auto Responses */}
-          <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Auto-Antworten (je Zeile, passend zu Buttons)</label>
-            <textarea
-              value={form.auto_responses}
-              onChange={(e) => setForm({ ...form, auto_responses: e.target.value })}
-              rows={3}
-              placeholder={"Ich schicke dir gleich freie Termine!\nHier sind alle Infos...\nKein Problem, meld dich gerne wieder."}
-              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none font-mono"
-            />
+            <label className="text-xs font-semibold text-gray-600 mb-2 block">
+              Quick-Reply Paare ({form.quickReplyPairs.length}/3)
+            </label>
+            <div className="space-y-3">
+              {form.quickReplyPairs.map((pair, idx) => (
+                <div key={idx} className="bg-gray-50 rounded-xl p-3 relative">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-400 font-medium w-4">#{idx + 1}</span>
+                    <input
+                      type="text"
+                      value={pair.button}
+                      onChange={(e) => updatePair(idx, 'button', e.target.value.slice(0, 20))}
+                      placeholder="Button-Text (max 20 Zeichen)"
+                      maxLength={20}
+                      className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-green-500 bg-white"
+                    />
+                    <span className="text-xs text-gray-400 w-8 text-right">{pair.button.length}/20</span>
+                    {form.quickReplyPairs.length > 1 && (
+                      <button
+                        onClick={() => removePair(idx)}
+                        className="text-red-400 hover:text-red-600 text-lg leading-none ml-1"
+                        title="Paar entfernen"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={pair.autoResponse}
+                    onChange={(e) => updatePair(idx, 'autoResponse', e.target.value)}
+                    rows={2}
+                    placeholder="Automatische Antwort auf Button-Klick..."
+                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-green-500 resize-none bg-white"
+                  />
+                </div>
+              ))}
+            </div>
+            {form.quickReplyPairs.length < 3 && (
+              <button
+                onClick={addPair}
+                className="mt-2 text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+              >
+                + Weiteres Quick-Reply Paar hinzufügen
+              </button>
+            )}
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Öffnungsrate %</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={form.openRate}
-                onChange={(e) => setForm({ ...form, openRate: e.target.value })}
-                placeholder="68"
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Antwortrate %</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={form.responseRate}
-                onChange={(e) => setForm({ ...form, responseRate: e.target.value })}
-                placeholder="34"
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Verschickt</label>
-              <input
-                type="number"
-                min="0"
-                value={form.sentCount}
-                onChange={(e) => setForm({ ...form, sentCount: e.target.value })}
-                placeholder="100"
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
-              />
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-2 block">
+              Performance-Daten
+              {previewScore > 0 && (
+                <span className={`ml-2 ${previewLabel.color}`}>→ Score: {previewLabel.label} ({previewScore})</span>
+              )}
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Verschickt</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.sent}
+                  onChange={(e) => setForm({ ...form, sent: e.target.value })}
+                  placeholder="150"
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Geöffnet</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.opened}
+                  onChange={(e) => setForm({ ...form, opened: e.target.value })}
+                  placeholder="127"
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Geantwortet</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.responded}
+                  onChange={(e) => setForm({ ...form, responded: e.target.value })}
+                  placeholder="45"
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+                />
+              </div>
             </div>
           </div>
 
@@ -301,19 +395,147 @@ function ExampleModal({
   );
 }
 
+// ─── KI-Einstellungen Tab ─────────────────────────────────────────────────────
+
+function AISettingsTab({ adminPw }: { adminPw: string }) {
+  const [industry, setIndustry] = useState<Industry>('autohaus');
+  const [schema, setSchema] = useState('');
+  const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadInstructions = useCallback(async (ind: Industry) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/instructions?industry=${ind}`);
+      const data = await res.json();
+      if (data.instructions) {
+        setSchema(data.instructions.schema ?? '');
+        setAdditionalInstructions(data.instructions.additionalInstructions ?? '');
+      } else {
+        setSchema('');
+        setAdditionalInstructions('');
+      }
+    } catch {
+      setError('Fehler beim Laden.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInstructions(industry);
+  }, [industry, loadInstructions]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess(false);
+    try {
+      const res = await fetch('/api/instructions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ industry, schema, additionalInstructions }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Fehler beim Speichern.');
+      }
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ind = INDUSTRIES.find((i) => i.id === industry);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <select
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value as Industry)}
+          className="border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-500 bg-white"
+        >
+          {INDUSTRIES.map((i) => (
+            <option key={i.id} value={i.id}>{i.icon} {i.label}</option>
+          ))}
+        </select>
+        <span className="text-sm text-gray-500">KI-Instruktionen für {ind?.label}</span>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-gray-400">Lade Einstellungen...</div>
+      ) : (
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">
+              📋 Schema / Ausgabe-Format
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Beschreibt die gewünschte Struktur des Outputs (JSON-Schema, Felder, Format etc.)
+            </p>
+            <textarea
+              value={schema}
+              onChange={(e) => setSchema(e.target.value)}
+              rows={6}
+              placeholder={`Beispiel:\n{\n  "optimized_message": "...",\n  "quick_replies": [...],\n  ...\n}`}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-green-500 resize-y"
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">
+              🧠 Zusatz-Instruktionen
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Branchenspezifisches Wissen, Beispiele, spezielle Regeln, Tonalität etc.
+            </p>
+            <textarea
+              value={additionalInstructions}
+              onChange={(e) => setAdditionalInstructions(e.target.value)}
+              rows={10}
+              placeholder="Beispiel: Verwende immer den Vornamen des Kunden. Vermeide aggressive Verkaufssprache..."
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 resize-y"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{error}</p>}
+          {success && <p className="text-green-600 text-sm bg-green-50 p-3 rounded-lg">✅ Gespeichert!</p>}
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Speichern...' : '💾 Instruktionen speichern'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Admin Page ──────────────────────────────────────────────────────────
+
+type TabType = 'examples' | 'stats' | 'ai-settings';
 
 export default function AdminPage() {
   const [adminPw, setAdminPw] = useState('');
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'examples' | 'stats'>('examples');
+  const [activeTab, setActiveTab] = useState<TabType>('examples');
   const [industry, setIndustry] = useState<Industry | 'all'>('all');
   const [examples, setExamples] = useState<MessageExample[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<MessageExample | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [authError, setAuthError] = useState(false);
 
   const fetchExamples = useCallback(async (pw: string, ind: Industry | 'all' = 'all') => {
     setLoading(true);
@@ -339,19 +561,10 @@ export default function AdminPage() {
     }
   }, []);
 
-  const handleAuth = async (pw: string) => {
-    // Verify password by making a test request
-    const res = await fetch('/api/examples?industry=autohaus&limit=1', {
-      headers: { 'x-admin-password': pw },
-    });
-    if (res.ok) {
-      setAdminPw(pw);
-      setAuthed(true);
-      setAuthError(false);
-      fetchExamples(pw, 'all');
-    } else {
-      setAuthError(true);
-    }
+  const handleAuth = (pw: string) => {
+    setAdminPw(pw);
+    setAuthed(true);
+    fetchExamples(pw, 'all');
   };
 
   const handleDelete = async (id: string) => {
@@ -376,23 +589,20 @@ export default function AdminPage() {
   }, [authed, industry, adminPw, fetchExamples]);
 
   if (!authed) {
-    return (
-      <>
-        <AuthGate onAuth={handleAuth} />
-        {authError && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm">
-            Falsches Passwort. Bitte nochmal versuchen.
-          </div>
-        )}
-      </>
-    );
+    return <AuthGate onAuth={handleAuth} />;
   }
 
   const filteredExamples = industry === 'all'
     ? examples
     : examples.filter((e) => e.industry === industry);
 
-  const sortedByRate = [...examples].sort((a, b) => (b.stats.openRate ?? -1) - (a.stats.openRate ?? -1));
+  const sortedByScore = [...examples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  const TABS: { id: TabType; label: string }[] = [
+    { id: 'examples', label: '📚 Beispiele' },
+    { id: 'stats', label: '📊 Statistiken' },
+    { id: 'ai-settings', label: '🤖 KI-Einstellungen' },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -411,26 +621,26 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-6">
         <div className="flex gap-0 max-w-5xl mx-auto">
-          {(['examples', 'stats'] as const).map((tab) => (
+          {TABS.map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               className={`px-6 py-4 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === tab
+                activeTab === tab.id
                   ? 'border-green-500 text-green-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'examples' ? '📚 Beispiele' : '📊 Statistiken'}
+              {tab.label}
             </button>
           ))}
         </div>
       </div>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
+        {/* ── Examples Tab ──────────────────────────────── */}
         {activeTab === 'examples' && (
           <>
-            {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <select
                 value={industry}
@@ -451,7 +661,6 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Table */}
             {loading ? (
               <div className="text-center py-12 text-gray-400">Lade Beispiele...</div>
             ) : filteredExamples.length === 0 ? (
@@ -464,6 +673,13 @@ export default function AdminPage() {
               <div className="space-y-3">
                 {filteredExamples.map((ex) => {
                   const ind = INDUSTRIES.find((i) => i.id === ex.industry);
+                  const scoreLabel = getScoreLabel(ex.score ?? 0);
+                  const sent = ex.stats.sent ?? ex.stats.sentCount ?? 0;
+                  const opened = ex.stats.opened ?? 0;
+                  const responded = ex.stats.responded ?? 0;
+                  const openPct = sent > 0 ? ((opened / sent) * 100).toFixed(1) : null;
+                  const respPct = sent > 0 ? ((responded / sent) * 100).toFixed(1) : null;
+
                   return (
                     <div key={ex.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-4">
                       <div className="text-2xl flex-shrink-0">{ind?.icon ?? '📌'}</div>
@@ -473,18 +689,15 @@ export default function AdminPage() {
                             {ind?.label ?? ex.industry}
                           </span>
                           <span className="font-semibold text-gray-800 text-sm">{ex.occasion}</span>
+                          <span className={`text-xs font-semibold ${scoreLabel.color}`}>
+                            {scoreLabel.label} ({ex.score ?? 0})
+                          </span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1 truncate">{ex.message}</p>
-                        <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                          <span>
-                            📬 Öffnungsrate: <strong className={ex.stats.openRate && ex.stats.openRate >= 60 ? 'text-green-600' : 'text-gray-600'}>
-                              {ex.stats.openRate !== null ? `${ex.stats.openRate}%` : '–'}
-                            </strong>
-                          </span>
-                          <span>
-                            💬 Antwortrate: <strong>{ex.stats.responseRate !== null ? `${ex.stats.responseRate}%` : '–'}</strong>
-                          </span>
-                          <span>✉️ Verschickt: <strong>{ex.stats.sentCount}</strong></span>
+                        <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
+                          <span>✉️ Verschickt: <strong>{sent}</strong></span>
+                          <span>📬 Geöffnet: <strong>{opened}</strong>{openPct && ` (${openPct}%)`}</span>
+                          <span>💬 Geantwortet: <strong>{responded}</strong>{respPct && ` (${respPct}%)`}</span>
                         </div>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
@@ -526,12 +739,13 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* ── Stats Tab ─────────────────────────────────── */}
         {activeTab === 'stats' && (
           <div>
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Beste Nachrichten nach Öffnungsrate</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Beste Nachrichten nach Score</h2>
             {loading ? (
               <div className="text-center py-12 text-gray-400">Lade Daten...</div>
-            ) : sortedByRate.length === 0 ? (
+            ) : sortedByScore.length === 0 ? (
               <div className="text-center py-12 text-gray-400">Noch keine Daten vorhanden.</div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -541,14 +755,22 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs">Branche</th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs">Anlass</th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs hidden sm:table-cell">Nachricht</th>
-                      <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Öffnungsrate</th>
-                      <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Antwortrate</th>
                       <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Verschickt</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Geöffnet</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Geantwortet</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600 text-xs">Score</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedByRate.map((ex, i) => {
+                    {sortedByScore.map((ex, i) => {
                       const ind = INDUSTRIES.find((ii) => ii.id === ex.industry);
+                      const scoreLabel = getScoreLabel(ex.score ?? 0);
+                      const sent = ex.stats.sent ?? ex.stats.sentCount ?? 0;
+                      const opened = ex.stats.opened ?? 0;
+                      const responded = ex.stats.responded ?? 0;
+                      const openPct = sent > 0 ? ((opened / sent) * 100).toFixed(1) : null;
+                      const respPct = sent > 0 ? ((responded / sent) * 100).toFixed(1) : null;
+
                       return (
                         <tr key={ex.id} className={`border-b border-gray-100 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -559,17 +781,24 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-gray-500 hidden sm:table-cell max-w-xs">
                             <span className="truncate block">{ex.message.substring(0, 60)}…</span>
                           </td>
+                          <td className="px-4 py-3 text-right text-gray-600">{sent}</td>
                           <td className="px-4 py-3 text-right">
-                            {ex.stats.openRate !== null ? (
-                              <span className={`font-bold ${ex.stats.openRate >= 60 ? 'text-green-600' : ex.stats.openRate >= 40 ? 'text-yellow-600' : 'text-red-500'}`}>
-                                {ex.stats.openRate}%
+                            {openPct ? (
+                              <span className={Number(openPct) >= 80 ? 'text-green-600 font-bold' : 'text-gray-600'}>
+                                {opened} ({openPct}%)
                               </span>
                             ) : <span className="text-gray-300">–</span>}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {ex.stats.responseRate !== null ? `${ex.stats.responseRate}%` : <span className="text-gray-300">–</span>}
+                          <td className="px-4 py-3 text-right">
+                            {respPct ? (
+                              <span className={Number(respPct) >= 30 ? 'text-green-600 font-bold' : 'text-gray-600'}>
+                                {responded} ({respPct}%)
+                              </span>
+                            ) : <span className="text-gray-300">–</span>}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-500">{ex.stats.sentCount}</td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`font-bold ${scoreLabel.color}`}>{scoreLabel.label} ({ex.score ?? 0})</span>
+                          </td>
                         </tr>
                       );
                     })}
@@ -578,6 +807,11 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ── AI Settings Tab ───────────────────────────── */}
+        {activeTab === 'ai-settings' && (
+          <AISettingsTab adminPw={adminPw} />
         )}
       </main>
 

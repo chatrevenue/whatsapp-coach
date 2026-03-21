@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExampleById, updateExample, deleteExample } from '@/lib/kv';
+import { calculateScore } from '@/lib/scoring';
 
 function isAuthorized(req: NextRequest): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return true; // No password set → open
+  if (!adminPassword) return true;
   return req.headers.get('x-admin-password') === adminPassword;
 }
 
@@ -34,7 +35,42 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const updates = await req.json();
+    const body = await req.json();
+    const { quickReplyPairs, quick_replies, auto_responses, stats, ...rest } = body;
+
+    // Normalize quickReplyPairs
+    let pairs = quickReplyPairs;
+    if (!pairs || !pairs.length) {
+      const qr = quick_replies ?? [];
+      const ar = auto_responses ?? [];
+      pairs = qr.map((btn: string, idx: number) => ({
+        button: btn,
+        autoResponse: ar[idx] ?? '',
+      }));
+    }
+
+    const normalizedStats = stats
+      ? {
+          sent: stats.sent ?? stats.sentCount ?? 0,
+          opened: stats.opened ?? 0,
+          responded: stats.responded ?? 0,
+          notes: stats.notes ?? '',
+        }
+      : undefined;
+
+    const score = normalizedStats ? calculateScore(normalizedStats) : undefined;
+
+    const updates = {
+      ...rest,
+      ...(pairs ? {
+        quickReplyPairs: pairs,
+        quick_replies: pairs.map((p: { button: string }) => p.button),
+        auto_responses: pairs.map((p: { autoResponse: string }) => p.autoResponse),
+      } : {}),
+      ...(normalizedStats ? { stats: normalizedStats } : {}),
+      ...(score !== undefined ? { score } : {}),
+    };
+
     const updated = await updateExample(id, updates);
     if (!updated) {
       return NextResponse.json({ error: 'Beispiel nicht gefunden.' }, { status: 404 });

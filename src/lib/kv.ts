@@ -1,4 +1,5 @@
 import type { MessageExample, Industry } from './types';
+import { calculateScore } from './scoring';
 import fallbackExamples from '../data/examples.json';
 
 function isKvAvailable(): boolean {
@@ -10,11 +11,79 @@ async function getKv() {
   return kv;
 }
 
+/** Normalize a raw stored example to the new shape (backward compat) */
+function normalizeExample(raw: unknown): MessageExample {
+  const e = raw as Record<string, unknown>;
+
+  // Migrate stats
+  const rawStats = (e.stats ?? {}) as Record<string, unknown>;
+  const sent =
+    typeof rawStats.sent === 'number'
+      ? rawStats.sent
+      : typeof rawStats.sentCount === 'number'
+      ? rawStats.sentCount
+      : 0;
+  const openRate =
+    typeof rawStats.openRate === 'number' ? rawStats.openRate : null;
+  const responseRate =
+    typeof rawStats.responseRate === 'number' ? rawStats.responseRate : null;
+  const opened =
+    typeof rawStats.opened === 'number'
+      ? rawStats.opened
+      : openRate !== null
+      ? Math.round((sent * openRate) / 100)
+      : 0;
+  const responded =
+    typeof rawStats.responded === 'number'
+      ? rawStats.responded
+      : responseRate !== null
+      ? Math.round((sent * responseRate) / 100)
+      : 0;
+
+  const stats: MessageExample['stats'] = {
+    sent,
+    opened,
+    responded,
+    notes: typeof rawStats.notes === 'string' ? rawStats.notes : '',
+    // keep legacy fields for backward compat
+    openRate: openRate ?? undefined,
+    responseRate: responseRate ?? undefined,
+    sentCount: typeof rawStats.sentCount === 'number' ? rawStats.sentCount : sent,
+  };
+
+  // Migrate quickReplyPairs
+  const quickReplies = Array.isArray(e.quick_replies) ? (e.quick_replies as string[]) : [];
+  const autoResponses = Array.isArray(e.auto_responses) ? (e.auto_responses as string[]) : [];
+  const quickReplyPairs: MessageExample['quickReplyPairs'] = Array.isArray(e.quickReplyPairs)
+    ? (e.quickReplyPairs as MessageExample['quickReplyPairs'])
+    : quickReplies.map((btn, idx) => ({
+        button: btn,
+        autoResponse: autoResponses[idx] ?? '',
+      }));
+
+  const score =
+    typeof e.score === 'number' ? e.score : calculateScore(stats);
+
+  return {
+    id: String(e.id ?? ''),
+    industry: e.industry as Industry,
+    occasion: String(e.occasion ?? ''),
+    message: String(e.message ?? ''),
+    quickReplyPairs,
+    quick_replies: quickReplies,
+    auto_responses: autoResponses,
+    stats,
+    score,
+    createdAt: String(e.createdAt ?? new Date().toISOString()),
+    updatedAt: String(e.updatedAt ?? new Date().toISOString()),
+  };
+}
+
 // ─── Read Operations ──────────────────────────────────────────────────────────
 
 export async function getExamplesByIndustry(industry: Industry): Promise<MessageExample[]> {
   if (!isKvAvailable()) {
-    return (fallbackExamples as MessageExample[]).filter((e) => e.industry === industry);
+    return (fallbackExamples as unknown[]).map(normalizeExample).filter((e) => e.industry === industry);
   }
 
   try {
@@ -22,36 +91,32 @@ export async function getExamplesByIndustry(industry: Industry): Promise<Message
     const ids = await kv.lrange<string>(`examples:${industry}`, 0, -1);
     if (!ids || ids.length === 0) return [];
 
-    const examples = await Promise.all(
-      ids.map((id) => kv.get<MessageExample>(`example:${id}`))
-    );
-
-    return examples.filter((e): e is MessageExample => e !== null);
+    const raws = await Promise.all(ids.map((id) => kv.get(`example:${id}`)));
+    return raws.filter(Boolean).map(normalizeExample);
   } catch (err) {
     console.error('[kv] getExamplesByIndustry error, falling back:', err);
-    return (fallbackExamples as MessageExample[]).filter((e) => e.industry === industry);
+    return (fallbackExamples as unknown[]).map(normalizeExample).filter((e) => e.industry === industry);
   }
 }
 
 export async function getTopExamples(industry: Industry, limit = 5): Promise<MessageExample[]> {
   const all = await getExamplesByIndustry(industry);
   return all
-    .sort((a, b) => {
-      const aRate = a.stats.openRate ?? -1;
-      const bRate = b.stats.openRate ?? -1;
-      return bRate - aRate;
-    })
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .slice(0, limit);
 }
 
 export async function getExampleById(id: string): Promise<MessageExample | null> {
   if (!isKvAvailable()) {
-    return (fallbackExamples as MessageExample[]).find((e) => e.id === id) ?? null;
+    const found = (fallbackExamples as unknown[]).map(normalizeExample).find((e) => e.id === id);
+    return found ?? null;
   }
 
   try {
     const kv = await getKv();
-    return await kv.get<MessageExample>(`example:${id}`);
+    const raw = await kv.get(`example:${id}`);
+    if (!raw) return null;
+    return normalizeExample(raw);
   } catch (err) {
     console.error('[kv] getExampleById error:', err);
     return null;
@@ -60,31 +125,30 @@ export async function getExampleById(id: string): Promise<MessageExample | null>
 
 export async function getAllExamples(): Promise<MessageExample[]> {
   if (!isKvAvailable()) {
-    return fallbackExamples as MessageExample[];
+    return (fallbackExamples as unknown[]).map(normalizeExample);
   }
 
   try {
-    const kv = await getKv();
     const industries: Industry[] = ['autohaus', 'restaurant', 'fitnessstudio', 'andere'];
     const results = await Promise.all(industries.map((ind) => getExamplesByIndustry(ind)));
     return results.flat();
   } catch (err) {
     console.error('[kv] getAllExamples error, falling back:', err);
-    return fallbackExamples as MessageExample[];
+    return (fallbackExamples as unknown[]).map(normalizeExample);
   }
 }
 
 // ─── Write Operations ─────────────────────────────────────────────────────────
 
 export async function createExample(
-  data: Omit<MessageExample, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<MessageExample, 'id' | 'createdAt' | 'updatedAt' | 'score'>
 ): Promise<MessageExample> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const example: MessageExample = { ...data, id, createdAt: now, updatedAt: now };
+  const score = calculateScore(data.stats);
+  const example: MessageExample = { ...data, id, score, createdAt: now, updatedAt: now };
 
   if (!isKvAvailable()) {
-    // In fallback mode we can't persist – just return the object
     return example;
   }
 
@@ -102,10 +166,14 @@ export async function updateExample(
   const existing = await getExampleById(id);
   if (!existing) return null;
 
+  const mergedStats = { ...existing.stats, ...(updates.stats ?? {}) };
+  const score = calculateScore(mergedStats);
+
   const updated: MessageExample = {
     ...existing,
     ...updates,
-    stats: { ...existing.stats, ...(updates.stats ?? {}) },
+    stats: mergedStats,
+    score,
     id,
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),

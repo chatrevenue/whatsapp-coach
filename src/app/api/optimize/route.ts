@@ -2,9 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/system-prompts';
 import { getTopExamples } from '@/lib/kv';
-import type { Industry, OptimizeRequest, OptimizeResponse } from '@/lib/types';
+import type { Industry, OptimizeRequest, OptimizeResponse, IndustryInstructions } from '@/lib/types';
 
 export { type OptimizeRequest, type OptimizeResponse };
+
+async function loadInstructions(industry: string): Promise<IndustryInstructions | null> {
+  try {
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+    if (!kvUrl || !kvToken) return null;
+
+    const { kv } = await import('@vercel/kv');
+    return await kv.get<IndustryInstructions>(`instructions:${industry}`);
+  } catch {
+    return null;
+  }
+}
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -41,9 +54,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load top 3 examples for dynamic system prompt
-    const examples = await getTopExamples(industry as Industry, 3);
-    const systemPrompt = buildSystemPrompt(industry, examples);
+    // Load top 3 examples and instructions for dynamic system prompt
+    const [examples, instructions] = await Promise.all([
+      getTopExamples(industry as Industry, 3),
+      loadInstructions(industry),
+    ]);
+
+    const systemPrompt = await buildSystemPrompt(industry, examples, instructions);
 
     const client = new Anthropic({ apiKey });
 

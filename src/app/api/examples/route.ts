@@ -26,7 +26,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { industry, occasion, message, quick_replies, auto_responses, stats } = body;
+    const {
+      industry,
+      occasion,
+      message,
+      quickReplyPairs,
+      // backward compat
+      quick_replies,
+      auto_responses,
+      stats,
+    } = body;
 
     if (!industry || !occasion || !message) {
       return NextResponse.json(
@@ -35,18 +44,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Normalize quickReplyPairs
+    let pairs = quickReplyPairs;
+    if (!pairs || !pairs.length) {
+      const qr = quick_replies ?? [];
+      const ar = auto_responses ?? [];
+      pairs = qr.map((btn: string, idx: number) => ({
+        button: btn,
+        autoResponse: ar[idx] ?? '',
+      }));
+    }
+
+    const normalizedStats = {
+      sent: stats?.sent ?? stats?.sentCount ?? 0,
+      opened: stats?.opened ?? 0,
+      responded: stats?.responded ?? 0,
+      notes: stats?.notes ?? '',
+    };
+
     const example = await createExample({
       industry,
       occasion,
       message,
-      quick_replies: quick_replies ?? [],
-      auto_responses: auto_responses ?? [],
-      stats: {
-        openRate: stats?.openRate ?? null,
-        responseRate: stats?.responseRate ?? null,
-        sentCount: stats?.sentCount ?? 0,
-        notes: stats?.notes ?? '',
-      },
+      quickReplyPairs: pairs,
+      quick_replies: pairs.map((p: { button: string }) => p.button),
+      auto_responses: pairs.map((p: { autoResponse: string }) => p.autoResponse),
+      stats: normalizedStats,
     });
 
     return NextResponse.json({ example }, { status: 201 });

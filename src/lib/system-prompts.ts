@@ -1,4 +1,4 @@
-import type { MessageExample } from './types';
+import type { MessageExample, IndustryInstructions } from './types';
 
 export const INDUSTRY_SYSTEM_PROMPTS: Record<string, string> = {
   autohaus: `Du bist ein WhatsApp Marketing Experte für Autohäuser.
@@ -113,22 +113,40 @@ AUSGABE IMMER als valides JSON:
 }`,
 };
 
-export function buildSystemPrompt(industry: string, examples: MessageExample[]): string {
-  const base = INDUSTRY_SYSTEM_PROMPTS[industry] ?? INDUSTRY_SYSTEM_PROMPTS['andere'];
+export async function buildSystemPrompt(
+  industry: string,
+  examples: MessageExample[],
+  instructions?: IndustryInstructions | null
+): Promise<string> {
+  let prompt = INDUSTRY_SYSTEM_PROMPTS[industry] ?? INDUSTRY_SYSTEM_PROMPTS['andere'];
 
-  if (examples.length === 0) return base;
+  // Zusatz-Instruktionen anhängen wenn vorhanden
+  if (instructions?.additionalInstructions) {
+    prompt += `\n\nZUSÄTZLICHE REGELN UND WISSEN:\n${instructions.additionalInstructions}`;
+  }
 
-  const examplesText = examples
-    .map(
-      (ex, i) =>
-        `Beispiel ${i + 1} (Anlass: ${ex.occasion}, Öffnungsrate: ${ex.stats.openRate ?? 'unbekannt'}%):
-Nachricht: "${ex.message}"
-Buttons: ${ex.quick_replies.join(' | ')}`
-    )
-    .join('\n\n');
+  // Schema überschreiben wenn vorhanden
+  if (instructions?.schema) {
+    prompt += `\n\nAUSGABE-SCHEMA:\n${instructions.schema}`;
+  }
 
-  return `${base}
+  // Top Examples anhängen
+  if (examples.length > 0) {
+    prompt += `\n\nBEWÄHRTE BEISPIELE (nach Performance sortiert):\n`;
+    examples.forEach((ex, i) => {
+      prompt += `\nBeispiel ${i + 1} (Score: ${ex.score ?? 0}):\n`;
+      prompt += `Nachricht: "${ex.message}"\n`;
+      const pairs = ex.quickReplyPairs?.length
+        ? ex.quickReplyPairs
+        : (ex.quick_replies ?? []).map((btn, idx) => ({
+            button: btn,
+            autoResponse: ex.auto_responses?.[idx] ?? '',
+          }));
+      pairs.forEach((pair) => {
+        prompt += `Button: "${pair.button}" → Antwort: "${pair.autoResponse}"\n`;
+      });
+    });
+  }
 
-ERFOLGREICHE BEISPIELE AUS DER PRAXIS (nutze diese als Inspiration):
-${examplesText}`;
+  return prompt;
 }
