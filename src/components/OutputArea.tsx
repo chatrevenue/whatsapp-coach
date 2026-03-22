@@ -143,78 +143,64 @@ export default function OutputArea({
                 }}>💬</div>
               </div>
 
-              {/* Quick Reply Pills */}
+              {/* Quick Reply + Auto Response Paare */}
               {result.quick_replies && result.quick_replies.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', paddingLeft: '4px' }}>Quick Reply Buttons:</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {result.quick_replies.map((reply, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          padding: '6px 14px',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', paddingLeft: '4px' }}>Quick Reply Buttons & automatische Antworten:</p>
+                  {result.quick_replies.map((reply, i) => (
+                    <div key={i} style={{
+                      background: 'rgba(255,255,255,0.95)',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                    }}>
+                      {/* Button row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          padding: '5px 14px',
                           borderRadius: '50px',
                           fontSize: '13px',
-                          fontWeight: 500,
-                          background: 'rgba(255,255,255,0.2)',
-                          border: '1px solid rgba(255,255,255,0.4)',
+                          fontWeight: 600,
+                          background: '#25D366',
                           color: 'white',
-                        }}
-                      >
-                        {reply}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Auto responses */}
-              {result.auto_responses && result.auto_responses.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', paddingLeft: '4px' }}>
-                    Wenn Kunde klickt → automatische Antwort:
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {result.auto_responses.map((resp, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-end', gap: '8px' }}>
-                        <div style={{
-                          width: '32px', height: '32px', borderRadius: '50%',
-                          background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', fontSize: '14px', flexShrink: 0,
-                        }}>🤖</div>
-                        <div style={{
-                          background: 'white',
-                          color: '#1A2E1A',
-                          borderRadius: '16px 16px 16px 4px',
-                          padding: '16px',
-                          maxWidth: '85%',
-                          fontSize: '14px',
-                          lineHeight: 1.6,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          border: '1px solid #E0E8E0',
+                          flexShrink: 0,
                         }}>
-                          {resp}
-                        </div>
+                          {reply}
+                        </span>
+                        <CopyButton text={reply} label="" />
                       </div>
-                    ))}
-                  </div>
+                      {/* Auto response */}
+                      {result.auto_responses && result.auto_responses[i] && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', color: '#6B9E6B', flexShrink: 0, marginTop: '2px' }}>↳</span>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '12px', color: '#6B9E6B', fontWeight: 500, marginBottom: '4px' }}>Automatische Antwort:</p>
+                            <p style={{ fontSize: '13px', color: '#1A2E1A', lineHeight: 1.5 }}>{result.auto_responses[i]}</p>
+                          </div>
+                          <CopyButton text={result.auto_responses[i]} label="" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
               {/* Tip */}
               {result.tip && (
                 <div style={{
-                  background: 'rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.95)',
                   borderRadius: '12px',
                   padding: '14px 16px',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.5)',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '8px',
                 }}>
                   <span style={{ fontSize: '14px' }}>💡</span>
-                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{result.tip}</p>
+                  <p style={{ fontSize: '13px', color: '#1A2E1A', lineHeight: 1.5 }}>{result.tip}</p>
                 </div>
               )}
             </div>
