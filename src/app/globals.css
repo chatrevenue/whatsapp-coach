@@ -2,26 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-primary: #0F1117;
-  --bg-secondary: #1A1D27;
-  --bg-card: #1E2130;
-  --accent: #25D366;
-  --accent-hover: #1DA851;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --border: #2D3348;
-
-  /* legacy compat */
-  --whatsapp-green: #25D366;
-  --whatsapp-green-dark: #128C7E;
-  --whatsapp-teal: #075E54;
-  --whatsapp-bubble: #DCF8C6;
-  --whatsapp-bg: #ECE5DD;
-}
-
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
@@ -32,8 +16,10 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0F1117;
-  color: #F1F5F9;
+  background: linear-gradient(135deg, #4A8B7A 0%, #8FBC9A 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: white;
 }
 
 /* Custom scrollbar */
@@ -41,10 +27,10 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #1A1D27;
+  background: rgba(255,255,255,0.1);
 }
 ::-webkit-scrollbar-thumb {
-  background: #25D366;
+  background: rgba(255,255,255,0.3);
   border-radius: 3px;
 }
 
@@ -76,7 +62,7 @@ body {
 /* Textarea focus ring */
 textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.2);
+  box-shadow: 0 0 0 3px rgba(154, 224, 154, 0.3);
 }
 
 /* Smooth transitions */

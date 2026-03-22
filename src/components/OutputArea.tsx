@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import ChatBubble from '@/components/ui/ChatBubble';
 import TypingIndicator from '@/components/ui/TypingIndicator';
 import CopyButton from '@/components/ui/CopyButton';
-import PillButton from '@/components/ui/PillButton';
 
 export interface OutputMessage {
   optimized_message: string;
@@ -56,52 +54,112 @@ export default function OutputArea({
     }
   };
 
+  const actionBtnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    background: 'rgba(255,255,255,0.9)',
+    border: '1px solid rgba(255,255,255,0.3)',
+    color: '#1A3A1A',
+    transition: 'all 0.15s ease',
+  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 pb-8 animate-fade-in-up">
+    <div className="w-full animate-fade-in-up">
       {/* Chat area */}
-      <div className="bg-[#1A1D27] rounded-2xl border border-[#2D3348] shadow-xl shadow-black/40 overflow-hidden">
+      <div style={{
+        background: 'rgba(255,255,255,0.12)',
+        backdropFilter: 'blur(12px)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255,255,255,0.2)',
+        overflow: 'hidden',
+      }}>
         {/* Chat header */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#2D3348] bg-[#1E2130]">
-          <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-sm">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '14px 20px',
+          borderBottom: '1px solid rgba(255,255,255,0.15)',
+          background: 'rgba(255,255,255,0.08)',
+        }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: '#25D366', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '16px', flexShrink: 0,
+          }}>
             💬
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#F1F5F9]">KI-Optimierung</p>
-            <p className="text-[10px] text-[#94A3B8]">WhatsApp Message Optimizer</p>
+            <p style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>KI-Optimierung</p>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>WhatsApp Message Optimizer</p>
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse"></span>
-            <span className="text-[10px] text-[#94A3B8]">online</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#25D366', display: 'inline-block' }}></span>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>online</span>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="p-5 space-y-4">
-          {/* Loading */}
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {isLoading && (
             <div className="animate-fade-in">
               <TypingIndicator />
             </div>
           )}
 
-          {/* Result bubble */}
           {!isLoading && result && (
-            <div className="animate-fade-in-up space-y-4">
-              <ChatBubble
-                message={result.optimized_message}
-                direction="outgoing"
-                timestamp={result.timestamp}
-              />
+            <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Outgoing bubble – optimized message */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '8px' }}>
+                <div style={{
+                  background: '#25D366',
+                  color: 'white',
+                  borderRadius: '16px 16px 4px 16px',
+                  padding: '16px',
+                  maxWidth: '85%',
+                  fontSize: '14px',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  <p>{result.optimized_message}</p>
+                  {result.timestamp && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px', gap: '4px' }}>
+                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>{result.timestamp}</span>
+                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>✓✓</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: '#25D366', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '14px', flexShrink: 0,
+                }}>💬</div>
+              </div>
 
               {/* Quick Reply Pills */}
               {result.quick_replies && result.quick_replies.length > 0 && (
-                <div className="space-y-2 pl-0">
-                  <p className="text-[11px] text-[#94A3B8] px-1">Quick Reply Buttons:</p>
-                  <div className="flex flex-wrap gap-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', paddingLeft: '4px' }}>Quick Reply Buttons:</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {result.quick_replies.map((reply, i) => (
                       <span
                         key={i}
-                        className="px-3 py-1 rounded-full text-xs font-medium bg-[#1E2130] text-[#F1F5F9] border border-[#2D3348]"
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '50px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          background: 'rgba(255,255,255,0.2)',
+                          border: '1px solid rgba(255,255,255,0.4)',
+                          color: 'white',
+                        }}
                       >
                         {reply}
                       </span>
@@ -112,18 +170,33 @@ export default function OutputArea({
 
               {/* Auto responses */}
               {result.auto_responses && result.auto_responses.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-[#94A3B8] px-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', paddingLeft: '4px' }}>
                     Wenn Kunde klickt → automatische Antwort:
                   </p>
-                  <div className="space-y-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {result.auto_responses.map((resp, i) => (
-                      <ChatBubble
-                        key={i}
-                        message={resp}
-                        direction="incoming"
-                        avatar="🤖"
-                      />
+                      <div key={i} style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-end', gap: '8px' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '50%',
+                          background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: '14px', flexShrink: 0,
+                        }}>🤖</div>
+                        <div style={{
+                          background: 'white',
+                          color: '#1A2E1A',
+                          borderRadius: '16px 16px 16px 4px',
+                          padding: '16px',
+                          maxWidth: '85%',
+                          fontSize: '14px',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          border: '1px solid #E0E8E0',
+                        }}>
+                          {resp}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -131,9 +204,17 @@ export default function OutputArea({
 
               {/* Tip */}
               {result.tip && (
-                <div className="bg-[#1E2130] rounded-xl px-4 py-3 border border-[#2D3348] flex items-start gap-2">
-                  <span className="text-sm">💡</span>
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">{result.tip}</p>
+                <div style={{
+                  background: 'rgba(255,255,255,0.12)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}>
+                  <span style={{ fontSize: '14px' }}>💡</span>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{result.tip}</p>
                 </div>
               )}
             </div>
@@ -143,63 +224,45 @@ export default function OutputArea({
 
       {/* Action Buttons */}
       {!isLoading && result && (
-        <div className="mt-4 space-y-3 animate-fade-in-up">
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Primary actions */}
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
             <CopyButton text={result.optimized_message} label="Nachricht kopieren" />
 
-            <button
-              onClick={handleCopyAll}
-              className={`
-                inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                transition-all duration-150 active:scale-95 border
-                ${copiedAll
-                  ? 'bg-wa-green text-white border-wa-green'
-                  : 'bg-[#1E2130] text-[#94A3B8] border-[#2D3348] hover:border-[#25D366] hover:text-[#F1F5F9]'
-                }
-              `}
-            >
+            <button onClick={handleCopyAll} style={actionBtnStyle}>
               {copiedAll ? <><span>✓</span><span>Kopiert!</span></> : <><span>📋</span><span>Alles kopieren</span></>}
             </button>
 
-            <button
-              onClick={onRegenerate}
-              className="
-                inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                bg-[#1E2130] text-[#94A3B8] border border-[#2D3348]
-                hover:border-[#25D366] hover:text-[#F1F5F9]
-                transition-all duration-150 active:scale-95
-              "
-            >
+            <button onClick={onRegenerate} style={actionBtnStyle}>
               <span>🔄</span>
               <span>Neu generieren</span>
             </button>
 
-            <button
-              onClick={onEdit}
-              className="
-                inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                bg-[#1E2130] text-[#94A3B8] border border-[#2D3348]
-                hover:border-[#25D366] hover:text-[#F1F5F9]
-                transition-all duration-150 active:scale-95
-              "
-            >
+            <button onClick={onEdit} style={actionBtnStyle}>
               <span>✏️</span>
               <span>Bearbeiten</span>
             </button>
           </div>
 
           {/* Improvement pills */}
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
             {IMPROVE_OPTIONS.map((opt) => (
-              <PillButton
+              <button
                 key={opt.label}
                 onClick={() => onImprove(opt.instruction)}
-                size="sm"
-                variant="ghost"
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.4)',
+                  borderRadius: '50px',
+                  color: 'white',
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
               >
                 {opt.label}
-              </PillButton>
+              </button>
             ))}
           </div>
         </div>

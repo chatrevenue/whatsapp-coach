@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import PillButton from '@/components/ui/PillButton';
 
 type Goal = 'verkauf' | 'erinnerung' | 'event' | 'followup' | null;
 type Tone = 'locker' | 'freundlich' | 'verkaufsstark' | null;
@@ -52,118 +51,223 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
     setMessage(text);
   };
 
+  const pillStyle = (active: boolean) => ({
+    borderRadius: '50px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: active ? 600 : 400,
+    cursor: 'pointer',
+    border: active
+      ? '1px solid rgba(255,255,255,0.6)'
+      : '1px solid rgba(255,255,255,0.3)',
+    background: active
+      ? 'rgba(255,255,255,0.35)'
+      : 'rgba(255,255,255,0.15)',
+    color: active ? 'white' : 'rgba(255,255,255,0.9)',
+    transition: 'all 0.15s ease',
+  } as React.CSSProperties);
+
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8">
-      {/* Main input card */}
-      <div className="bg-[#1E2130] rounded-2xl border border-[#2D3348] shadow-xl shadow-black/40 p-5 space-y-4">
+    <div className="w-full">
+      {/* Main white card */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
+        padding: '32px',
+        width: '100%',
+      }}>
+        {/* Card Label */}
+        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1A2E1A', marginBottom: '12px' }}>
+          📝 Deine aktuelle WhatsApp-Nachricht
+        </div>
+
+        {/* Goal Chips */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', color: 'rgba(26,46,26,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+            Ziel (optional)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {GOALS.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGoal(goal === g.id ? null : g.id)}
+                disabled={isLoading}
+                style={{
+                  borderRadius: '50px',
+                  padding: '5px 12px',
+                  fontSize: '12px',
+                  fontWeight: goal === g.id ? 600 : 400,
+                  cursor: 'pointer',
+                  border: goal === g.id
+                    ? '1px solid #9AE09A'
+                    : '1px solid #E0E8E0',
+                  background: goal === g.id
+                    ? 'rgba(154,224,154,0.2)'
+                    : 'white',
+                  color: goal === g.id ? '#1A3A1A' : '#6B9E6B',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tone Chips */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', color: 'rgba(26,46,26,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+            Ton (optional)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {TONES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTone(tone === t.id ? null : t.id)}
+                disabled={isLoading}
+                style={{
+                  borderRadius: '50px',
+                  padding: '5px 12px',
+                  fontSize: '12px',
+                  fontWeight: tone === t.id ? 600 : 400,
+                  cursor: 'pointer',
+                  border: tone === t.id
+                    ? '1px solid #9AE09A'
+                    : '1px solid #E0E8E0',
+                  background: tone === t.id
+                    ? 'rgba(154,224,154,0.2)'
+                    : 'white',
+                  color: tone === t.id ? '#1A3A1A' : '#6B9E6B',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Textarea */}
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
-          placeholder="Was möchtest du verschicken? (z. B. Aktion, Termin, Angebot...)"
-          rows={4}
+          placeholder="Füge hier deine Nachricht ein, die du optimieren möchtest..."
           maxLength={2000}
-          className="
-            w-full bg-[#0F1117] text-[#F1F5F9] placeholder-[#94A3B8]/50
-            rounded-xl px-4 py-3 text-sm leading-relaxed resize-none
-            border border-[#2D3348] focus:border-[#25D366]
-            transition-colors duration-150
-            disabled:opacity-50 disabled:cursor-not-allowed
-          "
+          style={{
+            border: '1px solid #E0E8E0',
+            borderRadius: '12px',
+            padding: '16px',
+            height: '120px',
+            fontSize: '14px',
+            width: '100%',
+            resize: 'vertical',
+            color: '#1A2E1A',
+            background: 'white',
+            fontFamily: 'inherit',
+            lineHeight: 1.5,
+          }}
         />
 
-        {/* Character count */}
-        <div className="flex justify-end">
-          <span className={`text-xs ${message.length > 1800 ? 'text-orange-400' : 'text-[#94A3B8]'}`}>
+        {/* Helper Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+          <button
+            onClick={() => handleExampleClick(EXAMPLES[0].text)}
+            disabled={isLoading}
+            style={{
+              color: '#6B9E6B',
+              fontSize: '14px',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+            }}
+          >
+            ✨ Beispiel laden
+          </button>
+          <span style={{ color: '#A0A8A0', fontSize: '13px' }}>
             {message.length}/2000
           </span>
         </div>
 
-        {/* Goal Chips */}
-        <div className="space-y-2">
-          <span className="text-xs text-[#94A3B8] font-medium uppercase tracking-wider">Ziel</span>
-          <div className="flex flex-wrap gap-2">
-            {GOALS.map((g) => (
-              <PillButton
-                key={g.id}
-                active={goal === g.id}
-                onClick={() => setGoal(goal === g.id ? null : g.id)}
-                disabled={isLoading}
-                size="sm"
-              >
-                {g.label}
-              </PillButton>
-            ))}
-          </div>
-        </div>
-
-        {/* Tone Chips */}
-        <div className="space-y-2">
-          <span className="text-xs text-[#94A3B8] font-medium uppercase tracking-wider">Ton</span>
-          <div className="flex flex-wrap gap-2">
-            {TONES.map((t) => (
-              <PillButton
-                key={t.id}
-                active={tone === t.id}
-                onClick={() => setTone(tone === t.id ? null : t.id)}
-                disabled={isLoading}
-                size="sm"
-              >
-                {t.label}
-              </PillButton>
-            ))}
-          </div>
-        </div>
-
-        {/* Generate Button */}
+        {/* CTA Button */}
         <button
           onClick={handleSubmit}
           disabled={!message.trim() || isLoading}
-          className="
-            w-full py-3.5 rounded-xl font-semibold text-sm text-white
-            bg-[#25D366] hover:bg-[#1DA851]
-            disabled:opacity-40 disabled:cursor-not-allowed
-            transition-all duration-150 active:scale-[0.99]
-            shadow-lg shadow-[#25D366]/20
-            flex items-center justify-center gap-2
-          "
+          style={{
+            width: '100%',
+            height: '52px',
+            background: !message.trim() || isLoading
+              ? 'rgba(154,224,154,0.5)'
+              : 'linear-gradient(135deg, #9AE09A, #A8E6A0)',
+            borderRadius: '12px',
+            border: 'none',
+            color: '#1A3A1A',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: !message.trim() || isLoading ? 'not-allowed' : 'pointer',
+            marginTop: '16px',
+            boxShadow: '0 2px 8px rgba(100,180,100,0.2)',
+            transition: 'all 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
         >
           {isLoading ? (
-            <>
-              <span className="animate-spin text-base">⟳</span>
-              <span>Generiere...</span>
-            </>
+            <>⏳ Optimiert...</>
           ) : (
-            <>
-              <span>✨</span>
-              <span>Nachricht generieren</span>
-              <span className="text-white/50 text-xs font-normal ml-1">⌘↵</span>
-            </>
+            <>🚀 Jetzt optimieren</>
           )}
         </button>
       </div>
 
       {/* Example Chips */}
-      <div className="mt-4 flex flex-wrap gap-2 justify-center">
+      <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
         {EXAMPLES.map((ex) => (
           <button
             key={ex.label}
             onClick={() => handleExampleClick(ex.text)}
             disabled={isLoading}
-            className="
-              text-xs px-3 py-1.5 rounded-full
-              bg-[#1A1D27] text-[#94A3B8] border border-[#2D3348]
-              hover:border-[#25D366]/50 hover:text-[#F1F5F9]
-              transition-all duration-150 active:scale-95
-              disabled:opacity-40 disabled:cursor-not-allowed
-            "
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              color: 'rgba(255,255,255,0.85)',
+              borderRadius: '50px',
+              padding: '6px 14px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
             {ex.label}
           </button>
         ))}
       </div>
+
+      {/* Ziel/Ton Pills also as transparent on green bg — shown as hint below examples */}
     </div>
   );
+}
+
+// Re-export pillStyle for use in parent if needed
+export function getPillStyle(active: boolean): React.CSSProperties {
+  return {
+    borderRadius: '50px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: active ? 600 : 400,
+    cursor: 'pointer',
+    border: active
+      ? '1px solid rgba(255,255,255,0.6)'
+      : '1px solid rgba(255,255,255,0.3)',
+    background: active
+      ? 'rgba(255,255,255,0.35)'
+      : 'rgba(255,255,255,0.15)',
+    color: active ? 'white' : 'rgba(255,255,255,0.9)',
+    transition: 'all 0.15s ease',
+  };
 }

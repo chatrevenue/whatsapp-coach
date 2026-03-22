@@ -17,7 +17,6 @@ export default function CopyButton({ text, label = 'Kopieren', className = '' }:
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback
       const textarea = document.createElement('textarea');
       textarea.value = text;
       document.body.appendChild(textarea);
@@ -32,15 +31,21 @@ export default function CopyButton({ text, label = 'Kopieren', className = '' }:
   return (
     <button
       onClick={handleCopy}
-      className={`
-        inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-        transition-all duration-150 active:scale-95 border
-        ${copied
-          ? 'bg-wa-green text-white border-wa-green'
-          : 'bg-wa-card text-[#94A3B8] border-wa-border hover:border-wa-green hover:text-[#F1F5F9]'
-        }
-        ${className}
-      `}
+      className={className}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 16px',
+        borderRadius: '10px',
+        fontSize: '14px',
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        background: copied ? '#25D366' : 'rgba(255,255,255,0.9)',
+        border: copied ? '1px solid #25D366' : '1px solid rgba(255,255,255,0.3)',
+        color: copied ? 'white' : '#1A3A1A',
+      }}
     >
       {copied ? (
         <>

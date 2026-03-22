@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Header from '@/components/Header';
 import InputArea, { type Goal, type Tone } from '@/components/InputArea';
 import OutputArea, { type OutputMessage } from '@/components/OutputArea';
 import type { Industry } from '@/lib/types';
+import { INDUSTRIES } from '@/lib/types';
 
 export default function Home() {
   const [industry, setIndustry] = useState<Industry>('autohaus');
@@ -12,7 +12,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OutputMessage | null>(null);
 
-  // Keep last request for regenerate
   const [lastRequest, setLastRequest] = useState<{
     message: string;
     goal: Goal;
@@ -57,7 +56,6 @@ export default function Home() {
           timestamp,
         });
 
-        // Scroll to output
         setTimeout(() => {
           document.getElementById('output')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -94,7 +92,6 @@ export default function Home() {
   };
 
   const handleEdit = () => {
-    // Scroll back to input area
     document.getElementById('input')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -107,87 +104,183 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F1117] flex flex-col">
-      <Header
-        industry={industry}
-        onIndustryChange={handleIndustryChange}
-        disabled={isLoading}
-      />
+    <div className="min-h-screen relative">
+      {/* Floating Decorative Icons */}
+      <div style={{
+        position: 'fixed', top: '24px', left: '24px', zIndex: 10,
+        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
+        padding: '12px', fontSize: '28px', lineHeight: 1,
+        pointerEvents: 'none',
+      }}>💬</div>
 
-      <main className="flex-1 flex flex-col items-center py-6">
-        {/* Input Section */}
-        <div id="input" className="w-full">
-          <InputArea onGenerate={handleGenerate} isLoading={isLoading} />
-        </div>
+      <div style={{
+        position: 'fixed', top: '24px', right: '24px', zIndex: 10,
+        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
+        padding: '12px', fontSize: '28px', lineHeight: 1,
+        pointerEvents: 'none',
+      }}>🚗</div>
 
-        {/* Error Banner */}
-        {error && (
-          <div className="w-full max-w-2xl px-4 mb-4 animate-fade-in">
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-              <span className="text-xl flex-shrink-0">❌</span>
-              <div className="flex-1">
-                <p className="font-semibold text-red-400 text-sm">Fehler beim Generieren</p>
-                <p className="text-xs text-red-400/80 mt-0.5">{error}</p>
-              </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-400/60 hover:text-red-400 text-lg leading-none"
-              >
-                ×
-              </button>
+      <div style={{
+        position: 'fixed', bottom: '24px', left: '24px', zIndex: 10,
+        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
+        padding: '12px', fontSize: '28px', lineHeight: 1,
+        pointerEvents: 'none',
+      }}>📅</div>
+
+      <div style={{
+        position: 'fixed', bottom: '24px', right: '24px', zIndex: 10,
+        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
+        padding: '12px', fontSize: '28px', lineHeight: 1,
+        pointerEvents: 'none',
+      }}>✅</div>
+
+      {/* Main Content */}
+      <main className="relative flex flex-col items-center px-4 pt-12 pb-16">
+        {/* Max-width container */}
+        <div style={{ width: '100%', maxWidth: '620px' }} className="flex flex-col items-center gap-6">
+
+          {/* Badge Pill */}
+          <div style={{
+            background: 'rgba(45, 74, 62, 0.75)',
+            borderRadius: '50px',
+            padding: '8px 20px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 500,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <span style={{ color: '#6FCF6A', fontSize: '12px' }}>●</span>
+            KI-gestützte WhatsApp-Optimierung
+          </div>
+
+          {/* Heading */}
+          <div style={{ textAlign: 'center', lineHeight: 1.15 }}>
+            <div style={{ fontSize: '52px', fontWeight: 800, color: '#F0EBDA' }}>
+              Mehr Antworten.
+            </div>
+            <div style={{ fontSize: '52px', fontWeight: 800, color: '#D4E4A0' }}>
+              Weniger ignoriert werden.
             </div>
           </div>
-        )}
 
-        {/* Output Section */}
-        <div id="output" className="w-full">
-          <OutputArea
-            result={result}
-            isLoading={isLoading}
-            onRegenerate={handleRegenerate}
-            onImprove={handleImprove}
-            onEdit={handleEdit}
-          />
-        </div>
+          {/* Subheading */}
+          <p style={{
+            fontSize: '17px',
+            color: 'rgba(255,255,255,0.75)',
+            textAlign: 'center',
+            maxWidth: '480px',
+            lineHeight: 1.5,
+          }}>
+            KI optimiert deine WhatsApp-Nachrichten nach dem Hormozi-Framework – speziell für Autohäuser entwickelt.
+          </p>
 
-        {/* How it works – only when idle */}
-        {!result && !isLoading && (
-          <section className="w-full max-w-2xl px-4 py-8 animate-fade-in">
-            <h2 className="text-base font-semibold text-[#94A3B8] text-center mb-6">
-              So funktioniert&apos;s
-            </h2>
-            <div className="grid sm:grid-cols-3 gap-4">
-              {[
-                {
-                  icon: '🏢',
-                  title: 'Branche wählen',
-                  desc: 'Wähle deine Branche oben rechts für einen maßgeschneiderten Prompt.',
-                },
-                {
-                  icon: '✍️',
-                  title: 'Nachricht eingeben',
-                  desc: 'Tippe deine Rohe Nachricht ein – Ziel und Ton optional.',
-                },
-                {
-                  icon: '🚀',
-                  title: 'Mehr Antworten',
-                  desc: 'Kopiere die optimierte Version und sende sie direkt über WhatsApp.',
-                },
-              ].map((s, i) => (
-                <div key={i} className="bg-[#1E2130] rounded-xl border border-[#2D3348] p-4 text-center">
-                  <div className="text-2xl mb-3">{s.icon}</div>
-                  <h3 className="font-semibold text-[#F1F5F9] text-sm mb-1">{s.title}</h3>
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">{s.desc}</p>
+          {/* Industry Selector Pills */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {INDUSTRIES.map((ind) => (
+              <button
+                key={ind.id}
+                onClick={() => handleIndustryChange(ind.id)}
+                disabled={isLoading}
+                style={{
+                  borderRadius: '50px',
+                  padding: '6px 16px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  border: industry === ind.id
+                    ? '1px solid rgba(255,255,255,0.5)'
+                    : '1px solid rgba(255,255,255,0.2)',
+                  background: industry === ind.id
+                    ? 'rgba(255,255,255,0.25)'
+                    : 'rgba(255,255,255,0.1)',
+                  color: industry === ind.id
+                    ? 'white'
+                    : 'rgba(255,255,255,0.7)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {ind.icon} {ind.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Input Section */}
+          <div id="input" className="w-full">
+            <InputArea onGenerate={handleGenerate} isLoading={isLoading} />
+          </div>
+
+          {/* Social Proof */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: '24px' }}>👩</span>
+            <span style={{ fontSize: '24px' }}>👩‍🦱</span>
+            <span style={{ fontSize: '24px' }}>👨</span>
+            <span style={{ fontSize: '24px' }}>🧑</span>
+            <span style={{ fontSize: '14px', color: 'rgba(45,77,61,0.9)' }}>
+              <strong style={{ fontWeight: 700 }}>127+ Autohäuser</strong> nutzen es bereits
+            </span>
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <div className="w-full animate-fade-in">
+              <div style={{
+                background: 'rgba(239,68,68,0.15)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+              }}>
+                <span style={{ fontSize: '20px', flexShrink: 0 }}>❌</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, color: '#FCA5A5', fontSize: '14px' }}>Fehler beim Generieren</p>
+                  <p style={{ fontSize: '12px', color: 'rgba(252,165,165,0.8)', marginTop: '2px' }}>{error}</p>
                 </div>
-              ))}
+                <button
+                  onClick={() => setError(null)}
+                  style={{ color: 'rgba(252,165,165,0.6)', fontSize: '20px', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
-          </section>
-        )}
+          )}
+
+          {/* Output Section */}
+          <div id="output" className="w-full">
+            <OutputArea
+              result={result}
+              isLoading={isLoading}
+              onRegenerate={handleRegenerate}
+              onImprove={handleImprove}
+              onEdit={handleEdit}
+            />
+          </div>
+
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-4 border-t border-[#2D3348] text-center">
-        <p className="text-xs text-[#94A3B8]">
+      <footer style={{
+        paddingTop: '16px',
+        paddingBottom: '16px',
+        borderTop: '1px solid rgba(255,255,255,0.15)',
+        textAlign: 'center',
+      }}>
+        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
           WhatsApp Message Optimizer · Powered by Claude AI
         </p>
       </footer>
