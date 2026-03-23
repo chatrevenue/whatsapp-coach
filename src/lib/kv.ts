@@ -185,6 +185,13 @@ export async function updateExample(
 
   const kv = await getKv();
   await kv.set(`example:${id}`, updated);
+
+  // Wenn Branche geändert wurde: ID aus altem Index entfernen, in neuen eintragen
+  if (updates.industry && updates.industry !== existing.industry) {
+    await kv.lrem(`examples:${existing.industry}`, 0, id);
+    await kv.lpush(`examples:${updates.industry}`, id);
+  }
+
   return updated;
 }
 
