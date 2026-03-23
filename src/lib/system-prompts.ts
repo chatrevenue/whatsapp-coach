@@ -162,5 +162,9 @@ export async function buildSystemPrompt(
     prompt += `\n\nAKTUELLE ERKENNTNISSE (automatisch analysiert):\n${insight.insight}`;
   }
 
+  // 6. JSON-Pflicht ans Ende setzen – wichtigste Position für Claude
+  prompt += `\n\n⚠️ PFLICHT: Antworte AUSSCHLIESSLICH mit validem JSON. Kein Text davor oder danach. Kein Markdown. Nur dieses Format:
+{"optimized_message":"...","quick_replies":["...","...","..."],"auto_responses":["...","...","..."],"tip":"..."}`;
+
   return prompt;
 }
