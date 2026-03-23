@@ -149,7 +149,7 @@ export async function createExample(
   const example: MessageExample = { ...data, id, score, createdAt: now, updatedAt: now };
 
   if (!isKvAvailable()) {
-    return example;
+    throw new Error('KV nicht konfiguriert. Bitte KV_REST_API_URL und KV_REST_API_TOKEN in Vercel setzen.');
   }
 
   const kv = await getKv();
@@ -179,7 +179,9 @@ export async function updateExample(
     updatedAt: new Date().toISOString(),
   };
 
-  if (!isKvAvailable()) return updated;
+  if (!isKvAvailable()) {
+    throw new Error('KV nicht konfiguriert. Bitte KV_REST_API_URL und KV_REST_API_TOKEN in Vercel setzen.');
+  }
 
   const kv = await getKv();
   await kv.set(`example:${id}`, updated);
@@ -190,7 +192,9 @@ export async function deleteExample(id: string): Promise<boolean> {
   const existing = await getExampleById(id);
   if (!existing) return false;
 
-  if (!isKvAvailable()) return false;
+  if (!isKvAvailable()) {
+    throw new Error('KV nicht konfiguriert. Bitte KV_REST_API_URL und KV_REST_API_TOKEN in Vercel setzen.');
+  }
 
   const kv = await getKv();
   await kv.del(`example:${id}`);
