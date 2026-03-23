@@ -1,9 +1,14 @@
-import { getAdminSession } from '@/lib/session';
+import { getAdminSession, validateSessionToken } from '@/lib/session';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const session = await getAdminSession();
-  return NextResponse.json({ authenticated: !!session });
+  try {
+    const token = await getAdminSession();
+    const authenticated = !!token && validateSessionToken(token);
+    return NextResponse.json({ authenticated });
+  } catch {
+    return NextResponse.json({ authenticated: false });
+  }
 }

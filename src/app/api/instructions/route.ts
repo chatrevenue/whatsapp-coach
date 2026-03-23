@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminAuthenticated } from '@/lib/session';
 import type { IndustryInstructions } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -10,12 +11,6 @@ function isKvAvailable(): boolean {
 async function getKv() {
   const { kv } = await import('@vercel/kv');
   return kv;
-}
-
-function isAuthorized(req: NextRequest): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return true;
-  return req.headers.get('x-admin-password') === adminPassword;
 }
 
 export async function GET(req: NextRequest) {
@@ -41,7 +36,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  const pw = req.headers.get('x-admin-password');
+  if (!(await isAdminAuthenticated(pw))) {
     return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 });
   }
 
@@ -60,7 +56,6 @@ export async function PUT(req: NextRequest) {
     };
 
     if (!isKvAvailable()) {
-      // No KV available – return the object without persisting
       return NextResponse.json({ instructions });
     }
 

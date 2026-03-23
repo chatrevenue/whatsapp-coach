@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopExamples, createExample } from '@/lib/kv';
+import { isAdminAuthenticated } from '@/lib/session';
 import type { Industry } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -20,10 +21,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Simple admin auth check
-    const authHeader = req.headers.get('x-admin-password');
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    if (adminPassword && authHeader !== adminPassword) {
+    const pw = req.headers.get('x-admin-password');
+    if (!(await isAdminAuthenticated(pw))) {
       return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 });
     }
 
@@ -74,9 +73,6 @@ export async function POST(req: NextRequest) {
       auto_responses: pairs.map((p: { autoResponse: string }) => p.autoResponse),
       stats: normalizedStats,
     });
-
-    // Note: analysis is triggered manually from admin panel or via cron.
-    // Fire-and-forget self-fetch is unreliable on Vercel serverless.
 
     return NextResponse.json({ example }, { status: 201 });
   } catch (err) {

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExampleById, updateExample, deleteExample } from '@/lib/kv';
+import { isAdminAuthenticated } from '@/lib/session';
 import { calculateScore } from '@/lib/scoring';
 
 export const dynamic = 'force-dynamic';
 
-function isAuthorized(req: NextRequest): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return true;
-  return req.headers.get('x-admin-password') === adminPassword;
+async function checkAuth(req: NextRequest): Promise<boolean> {
+  const pw = req.headers.get('x-admin-password');
+  return isAdminAuthenticated(pw);
 }
 
 export async function GET(
@@ -31,7 +31,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAuthorized(req)) {
+  if (!(await checkAuth(req))) {
     return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 });
   }
 
@@ -86,9 +86,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Beispiel nicht gefunden.' }, { status: 404 });
     }
 
-    // Note: analysis is triggered manually from admin panel or via cron.
-    // Fire-and-forget self-fetch is unreliable on Vercel serverless.
-
     return NextResponse.json({ example: updated });
   } catch (err) {
     console.error('[PUT /api/examples/[id]]', err);
@@ -100,7 +97,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAuthorized(req)) {
+  if (!(await checkAuth(req))) {
     return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getExamplesForIndustry, saveInsight, getInsight } from '@/lib/kv';
+import { isAdminAuthenticated } from '@/lib/session';
 import type { IndustryInsight } from '@/lib/kv';
 
 export const dynamic = 'force-dynamic';
@@ -19,12 +20,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, results });
 }
 
-// POST: Manueller Trigger aus Admin (prüft x-admin-password Header oder body.adminPassword)
+// POST: Manueller Trigger aus Admin (prüft x-admin-password Header, body.adminPassword, oder Session-Cookie)
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { industry?: string; adminPassword?: string };
   const pw = req.headers.get('x-admin-password') ?? body.adminPassword ?? '';
 
-  if (pw !== process.env.ADMIN_PASSWORD) {
+  if (!(await isAdminAuthenticated(pw || null))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -93,15 +94,28 @@ Gib konkrete, umsetzbare Regeln die für JEDE Branche gelten.`,
   });
 }
 
+// Non-retryable HTTP status codes (client errors that won't fix themselves)
+const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 422]);
+
 // Helper für retry mit exponential backoff
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, delayMs = 5000): Promise<T> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
-    } catch (err) {
+    } catch (err: unknown) {
+      // Don't retry client errors (e.g. 401 invalid API key, 400 bad request)
+      if (
+        err &&
+        typeof err === 'object' &&
+        'status' in err &&
+        typeof (err as { status: unknown }).status === 'number' &&
+        NON_RETRYABLE_STATUSES.has((err as { status: number }).status)
+      ) {
+        throw err;
+      }
       if (attempt === maxAttempts) throw err;
       console.warn(`Attempt ${attempt} failed, retrying in ${delayMs * attempt}ms...`, err);
-      await new Promise<void>((r) => setTimeout(r, delayMs * attempt)); // exponential: 5s, 10s, 15s
+      await new Promise<void>((r) => setTimeout(r, delayMs * attempt)); // linear backoff: 5s, 10s, 15s
     }
   }
   throw new Error('unreachable');

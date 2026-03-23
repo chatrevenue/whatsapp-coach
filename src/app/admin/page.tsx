@@ -723,19 +723,24 @@ export default function AdminPage() {
   const [editTarget, setEditTarget] = useState<MessageExample | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  const [sessionChecked, setSessionChecked] = useState(false);
+
   // Session-Check beim Mount: Wenn Cookie-Session vorhanden → AuthGate überspringen
+  // adminPw bleibt leer – API routes now also accept the session cookie
   useEffect(() => {
+    let cancelled = false;
     fetch('/api/admin/session')
       .then((r) => r.json())
       .then((d: { authenticated?: boolean }) => {
-        if (d.authenticated) {
-          // Cookie-Session aktiv: authed=true setzen, adminPw bleibt leer
-          // User muss beim nächsten API-Call, der x-admin-password braucht, trotzdem Passwort eingeben
-          // → Option A: nur authed=true für UI-State, Passwort-Eingabe nötig für API-Calls
+        if (!cancelled && d.authenticated) {
           setAuthed(true);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSessionChecked(true);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   const fetchExamples = useCallback(async (pw: string, ind: Industry | 'all' = 'all') => {
@@ -777,6 +782,11 @@ export default function AdminPage() {
     setAuthed(false);
     setAdminPw('');
     setExamples([]);
+    setActiveTab('examples');
+    setIndustry('all');
+    setShowModal(false);
+    setEditTarget(null);
+    setDeleteConfirm(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -799,6 +809,15 @@ export default function AdminPage() {
       fetchExamples(adminPw, industry === 'all' ? 'all' : industry);
     }
   }, [authed, industry, adminPw, fetchExamples]);
+
+  // Show loading spinner during session check to prevent AuthGate flash
+  if (!sessionChecked && !authed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-400 text-sm">Prüfe Session...</div>
+      </div>
+    );
+  }
 
   if (!authed) {
     return <AuthGate onAuth={handleAuth} />;

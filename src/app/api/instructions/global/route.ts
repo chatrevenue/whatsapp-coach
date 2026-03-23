@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalInstructions, saveGlobalInstructions } from '@/lib/kv';
+import { isAdminAuthenticated } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
-
-function isAuthorized(req: NextRequest): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return true;
-  return req.headers.get('x-admin-password') === adminPassword;
-}
 
 export async function GET() {
   try {
@@ -20,7 +15,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  const pw = req.headers.get('x-admin-password');
+  if (!(await isAdminAuthenticated(pw))) {
     return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 });
   }
 
