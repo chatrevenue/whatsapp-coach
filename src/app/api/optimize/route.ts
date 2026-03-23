@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/system-prompts';
-import { getTopExamples } from '@/lib/kv';
+import { getTopExamples, getGlobalInstructions, getInsight } from '@/lib/kv';
 import type { Industry, OptimizeRequest, OptimizeResponse, IndustryInstructions } from '@/lib/types';
 
 export { type OptimizeRequest, type OptimizeResponse };
@@ -54,13 +54,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load top 3 examples and instructions for dynamic system prompt
-    const [examples, instructions] = await Promise.all([
+    // Load top 3 examples, instructions, global instructions and insight
+    const [examples, instructions, globalInstructions, insight] = await Promise.all([
       getTopExamples(industry as Industry, 3),
       loadInstructions(industry),
+      getGlobalInstructions(),
+      getInsight(industry),
     ]);
 
-    const systemPrompt = await buildSystemPrompt(industry, examples, instructions);
+    const systemPrompt = await buildSystemPrompt(industry, examples, instructions, globalInstructions, insight);
 
     const client = new Anthropic({ apiKey });
 

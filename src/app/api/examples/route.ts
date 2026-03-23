@@ -72,6 +72,19 @@ export async function POST(req: NextRequest) {
       stats: normalizedStats,
     });
 
+    // Fire-and-forget: Analyse triggern wenn stats vorhanden
+    if (normalizedStats.sent > 0) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      fetch(`${appUrl}/api/cron/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': process.env.ADMIN_PASSWORD ?? '',
+        },
+        body: JSON.stringify({ industry: example.industry }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ example }, { status: 201 });
   } catch (err) {
     console.error('[POST /api/examples]', err);

@@ -75,6 +75,20 @@ export async function PUT(
     if (!updated) {
       return NextResponse.json({ error: 'Beispiel nicht gefunden.' }, { status: 404 });
     }
+
+    // Fire-and-forget: Analyse triggern wenn stats vorhanden
+    if (normalizedStats && normalizedStats.sent > 0) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      fetch(`${appUrl}/api/cron/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': process.env.ADMIN_PASSWORD ?? '',
+        },
+        body: JSON.stringify({ industry: updated.industry }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ example: updated });
   } catch (err) {
     console.error('[PUT /api/examples/[id]]', err);

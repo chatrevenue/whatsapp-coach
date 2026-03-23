@@ -1,4 +1,5 @@
 import type { MessageExample, IndustryInstructions } from './types';
+import type { GlobalInstructions, IndustryInsight } from './kv';
 
 export const INDUSTRY_SYSTEM_PROMPTS: Record<string, string> = {
   autohaus: `Du bist ein WhatsApp Marketing Experte für Autohäuser.
@@ -116,13 +117,21 @@ AUSGABE IMMER als valides JSON:
 export async function buildSystemPrompt(
   industry: string,
   examples: MessageExample[],
-  instructions?: IndustryInstructions | null
+  instructions?: IndustryInstructions | null,
+  globalInstructions?: GlobalInstructions | null,
+  insight?: IndustryInsight | null
 ): Promise<string> {
+  // 1. Basis-Prompt
   let prompt = INDUSTRY_SYSTEM_PROMPTS[industry] ?? INDUSTRY_SYSTEM_PROMPTS['andere'];
 
-  // Zusatz-Instruktionen anhängen wenn vorhanden
+  // 2. Globale Instruktionen
+  if (globalInstructions?.additionalInstructions) {
+    prompt += `\n\nGLOBALE REGELN (gelten für alle Branchen):\n${globalInstructions.additionalInstructions}`;
+  }
+
+  // 3. Branchenspezifische Zusatz-Instruktionen
   if (instructions?.additionalInstructions) {
-    prompt += `\n\nZUSÄTZLICHE REGELN UND WISSEN:\n${instructions.additionalInstructions}`;
+    prompt += `\n\nBRANCHENSPEZIFISCHE REGELN:\n${instructions.additionalInstructions}`;
   }
 
   // Schema überschreiben wenn vorhanden
@@ -130,7 +139,7 @@ export async function buildSystemPrompt(
     prompt += `\n\nAUSGABE-SCHEMA:\n${instructions.schema}`;
   }
 
-  // Top Examples anhängen
+  // 4. Top Examples anhängen
   if (examples.length > 0) {
     prompt += `\n\nBEWÄHRTE BEISPIELE (nach Performance sortiert):\n`;
     examples.forEach((ex, i) => {
@@ -146,6 +155,11 @@ export async function buildSystemPrompt(
         prompt += `Button: "${pair.button}" → Antwort: "${pair.autoResponse}"\n`;
       });
     });
+  }
+
+  // 5. Branchen-Insight anhängen
+  if (insight?.insight) {
+    prompt += `\n\nAKTUELLE ERKENNTNISSE (automatisch analysiert):\n${insight.insight}`;
   }
 
   return prompt;

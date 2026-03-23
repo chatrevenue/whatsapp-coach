@@ -208,3 +208,61 @@ export async function getIndustryCounts(): Promise<Record<Industry, number>> {
   );
   return Object.fromEntries(counts) as Record<Industry, number>;
 }
+
+// ─── Alias for cron usage (accepts string) ────────────────────────────────────
+
+export async function getExamplesForIndustry(industry: string): Promise<MessageExample[]> {
+  return getExamplesByIndustry(industry as Industry);
+}
+
+// ─── Global Instructions ──────────────────────────────────────────────────────
+
+export interface GlobalInstructions {
+  additionalInstructions: string;
+  updatedAt: string;
+}
+
+export async function getGlobalInstructions(): Promise<GlobalInstructions | null> {
+  if (!isKvAvailable()) return null;
+  try {
+    const kv = await getKv();
+    return await kv.get<GlobalInstructions>('instructions:global');
+  } catch (err) {
+    console.error('[kv] getGlobalInstructions error:', err);
+    return null;
+  }
+}
+
+export async function saveGlobalInstructions(data: { additionalInstructions: string }): Promise<void> {
+  if (!isKvAvailable()) return;
+  const kv = await getKv();
+  await kv.set('instructions:global', {
+    additionalInstructions: data.additionalInstructions,
+    updatedAt: new Date().toISOString(),
+  } satisfies GlobalInstructions);
+}
+
+// ─── Industry Insights ────────────────────────────────────────────────────────
+
+export interface IndustryInsight {
+  insight: string;
+  generatedAt: string;
+  exampleCount: number;
+}
+
+export async function getInsight(industry: string): Promise<IndustryInsight | null> {
+  if (!isKvAvailable()) return null;
+  try {
+    const kv = await getKv();
+    return await kv.get<IndustryInsight>(`insight:${industry}`);
+  } catch (err) {
+    console.error('[kv] getInsight error:', err);
+    return null;
+  }
+}
+
+export async function saveInsight(industry: string, data: IndustryInsight): Promise<void> {
+  if (!isKvAvailable()) return;
+  const kv = await getKv();
+  await kv.set(`insight:${industry}`, data);
+}
