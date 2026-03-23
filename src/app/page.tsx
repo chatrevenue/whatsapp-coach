@@ -5,82 +5,47 @@ import Header from '@/components/Header';
 import InputArea, { type Goal, type Tone } from '@/components/InputArea';
 import OutputArea, { type OutputMessage } from '@/components/OutputArea';
 import type { Industry } from '@/lib/types';
+import { INDUSTRIES } from '@/lib/types';
+
+// ─── Static data ────────────────────────────────────────────────────────────
 
 const GOOD_MESSAGE_POINTS = [
-  { icon: '👋', title: 'Persönlich & kurz', desc: 'Max. 2-3 Sätze. Kein Roman. Kein Newsletter-Stil.' },
+  { icon: '👋', title: 'Persönlich & kurz', desc: 'Max. 2–3 Sätze. Kein Roman. Kein Newsletter-Stil.' },
   { icon: '❓', title: 'Immer eine Frage', desc: 'Jede Nachricht endet mit einer einfachen Frage – beantwortet über Quick-Reply-Buttons.' },
   { icon: '🎯', title: 'Infos kommen danach', desc: 'Produkt, Preis, Details – alles kommt erst in der automatischen Antwort auf den Button-Klick.' },
-  { icon: '🤝', title: 'Kein Verkaufsdruck', desc: 'Die erste Nachricht macht neugierig. Nicht aufdringlich.' },
+  { icon: '🤝', title: 'Kein Verkaufsdruck', desc: 'Die erste Nachricht macht neugierig. Nicht aufdringlich. Nicht werblich.' },
 ];
 
 const STEPS = [
-  { step: '1', icon: '✍️', title: 'Kurz beschreiben', desc: 'Was willst du kommunizieren? Ein Satz reicht.' },
-  { step: '2', icon: '🤖', title: 'KI optimiert', desc: 'Claude verwandelt es in eine WhatsApp-freundliche Nachricht mit Quick-Replies.' },
-  { step: '3', icon: '📋', title: 'Kopieren & senden', desc: 'Alles einzeln kopierbar – direkt in ChatRevenue einfügen.' },
+  { step: '1', icon: '✍️', title: 'Kurz beschreiben', desc: 'Was willst du kommunizieren? Ein Satz reicht – der Rest kommt von der KI.' },
+  { step: '2', icon: '🤖', title: 'KI optimiert', desc: 'Claude verwandelt es in eine WhatsApp-Nachricht mit Quick-Replies und automatischer Antwort.' },
+  { step: '3', icon: '📋', title: 'Kopieren & senden', desc: 'Alles einzeln kopierbar – direkt in ChatRevenue oder WhatsApp einfügen.' },
 ];
 
 const LEARNING_POINTS = [
-  { icon: '💾', title: 'Antworten werden gespeichert', desc: 'Was deine Kunden antworten, wird analysiert und gemerkt.' },
-  { icon: '🧠', title: 'Personalisierung wächst', desc: 'Mit der Zeit weiß das System, was bei welchem Kunden ankommt.' },
-  { icon: '📈', title: 'Bessere Ergebnisse', desc: 'Öffnungsraten, Klickraten, Antworten – alles steigt.' },
+  { icon: '💾', title: 'Antworten werden gespeichert', desc: 'Was deine Kunden antworten, wird analysiert – du siehst welche Nachrichten ankommen.' },
+  { icon: '🧠', title: 'Personalisierung wächst', desc: 'Mit der Zeit weiß das System, was bei welchem Kunden funktioniert.' },
+  { icon: '📈', title: 'Bessere Ergebnisse', desc: 'Öffnungsraten, Klickraten, Antworten – je mehr du sendest, desto besser wird\'s.' },
 ];
 
-const sectionContainerStyle: React.CSSProperties = {
-  marginTop: '48px',
-  background: 'rgba(255,255,255,0.12)',
-  backdropFilter: 'blur(12px)',
-  borderRadius: '20px',
-  border: '1px solid rgba(255,255,255,0.2)',
-  padding: '32px',
-  width: '100%',
-};
+const WA_STATS = [
+  '📊 WhatsApp hat eine Öffnungsrate von 98%',
+  '💬 40% höhere Antwortrate als E-Mail',
+  '⚡ Kunden antworten im Schnitt binnen 3 Minuten',
+  '🚀 Businesses berichten +30% mehr Umsatz mit WhatsApp',
+  '👥 Über 2 Milliarden aktive WhatsApp-Nutzer weltweit',
+];
 
-const sectionHeadlineStyle: React.CSSProperties = {
-  color: 'white',
-  fontSize: '24px',
-  fontWeight: 700,
-  marginBottom: '8px',
-};
-
-const sectionSubtextStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.75)',
-  fontSize: '15px',
-  marginBottom: '24px',
-};
-
-const itemCardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.15)',
-  borderRadius: '12px',
-  padding: '16px',
-  display: 'flex',
-  gap: '12px',
-  alignItems: 'flex-start',
-};
-
-const itemIconStyle: React.CSSProperties = {
-  fontSize: '24px',
-  flexShrink: 0,
-  lineHeight: 1,
-};
-
-const itemTitleStyle: React.CSSProperties = {
-  color: 'white',
-  fontWeight: 600,
-  fontSize: '14px',
-  marginBottom: '4px',
-};
-
-const itemDescStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.7)',
-  fontSize: '13px',
-  lineHeight: 1.5,
-};
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [industry, setIndustry] = useState<Industry>('autohaus');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OutputMessage | null>(null);
+
+  // Social proof stat – random initial, click cycles through
+  const [statIndex, setStatIndex] = useState(() => Math.floor(Math.random() * WA_STATS.length));
 
   const [lastRequest, setLastRequest] = useState<{
     message: string;
@@ -173,148 +138,88 @@ export default function Home() {
     }
   };
 
+  const handleStatClick = () => {
+    setStatIndex((prev) => (prev + 1) % WA_STATS.length);
+  };
+
   return (
-    <div className="min-h-screen relative">
-      {/* Background Glassmorphism Icons */}
-      <div style={{
-        position: 'fixed', top: '24px', left: '24px', zIndex: 0,
-        background: 'rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '20px',
-        padding: '16px',
-        fontSize: '36px',
-        lineHeight: 1,
-        pointerEvents: 'none',
-      }}>💬</div>
+    <div className="min-h-screen">
+      {/* Header (minimal / null) */}
+      <Header industry={industry} onIndustryChange={handleIndustryChange} disabled={isLoading} />
 
-      <div style={{
-        position: 'fixed', top: '24px', right: '24px', zIndex: 0,
-        background: 'rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '20px',
-        padding: '16px',
-        fontSize: '36px',
-        lineHeight: 1,
-        pointerEvents: 'none',
-      }}>🚗</div>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="relative px-4 pt-12 pb-8 flex flex-col items-center overflow-hidden">
+        {/* Background Icons */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+          <span className="absolute top-8 left-8 text-5xl opacity-10">💬</span>
+          <span className="absolute top-16 right-12 text-4xl opacity-10">🚗</span>
+          <span className="absolute bottom-8 left-1/4 text-5xl opacity-10">📱</span>
+          <span className="absolute bottom-16 right-8 text-4xl opacity-10">✅</span>
+        </div>
 
-      <div style={{
-        position: 'fixed', bottom: '24px', left: '24px', zIndex: 0,
-        background: 'rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '20px',
-        padding: '16px',
-        fontSize: '36px',
-        lineHeight: 1,
-        pointerEvents: 'none',
-      }}>📅</div>
-
-      <div style={{
-        position: 'fixed', bottom: '24px', right: '24px', zIndex: 0,
-        background: 'rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '20px',
-        padding: '16px',
-        fontSize: '36px',
-        lineHeight: 1,
-        pointerEvents: 'none',
-      }}>✅</div>
-
-      {/* Sticky Header */}
-      <Header
-        industry={industry}
-        onIndustryChange={handleIndustryChange}
-        disabled={isLoading}
-      />
-
-      {/* Main Content */}
-      <main className="relative flex flex-col items-center px-4 pt-10 pb-16">
-        {/* Max-width container */}
-        <div style={{ width: '100%', maxWidth: '620px' }} className="flex flex-col items-center gap-6">
-
-          {/* Badge Pill */}
-          <div style={{
-            background: 'rgba(45, 74, 62, 0.75)',
-            borderRadius: '50px',
-            padding: '8px 20px',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: 500,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
-            <span style={{ color: '#6FCF6A', fontSize: '12px' }}>●</span>
+        <div className="relative w-full max-w-xl flex flex-col items-center gap-6">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white"
+            style={{ background: 'rgba(7,94,84,0.75)' }}>
+            <span style={{ color: '#25D366', fontSize: '10px' }}>●</span>
             KI-gestützte WhatsApp-Optimierung
           </div>
 
-          {/* Heading */}
-          <div style={{ textAlign: 'center', lineHeight: 1.15 }}>
-            <div style={{ fontSize: '52px', fontWeight: 800, color: '#F0EBDA' }}>
-              Mehr Antworten.
-            </div>
-            <div style={{ fontSize: '52px', fontWeight: 800, color: '#D4E4A0' }}>
-              Weniger ignoriert werden.
-            </div>
-          </div>
+          {/* Headline */}
+          <h1 className="text-3xl sm:text-5xl font-bold text-white text-center leading-tight mb-4">
+            Mehr Antworten.<br />
+            <span style={{ color: '#DCF8C6' }}>Weniger ignoriert werden.</span>
+          </h1>
 
-          {/* Subheading */}
-          <p style={{
-            fontSize: '17px',
-            color: 'rgba(255,255,255,0.75)',
-            textAlign: 'center',
-            maxWidth: '480px',
-            lineHeight: 1.5,
-          }}>
-            KI optimiert deine WhatsApp-Nachrichten nach dem Hormozi-Framework – speziell für Autohäuser entwickelt.
+          {/* Subheadline */}
+          <p className="text-white/75 text-[17px] text-center max-w-[480px] leading-relaxed">
+            KI optimiert deine WhatsApp-Nachrichten für maximale Rücklaufquoten – in Sekunden.
           </p>
 
-          {/* Input Section */}
+          {/* Industry Selector */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {INDUSTRIES.map((ind) => (
+              <button
+                key={ind.id}
+                onClick={() => handleIndustryChange(ind.id)}
+                disabled={isLoading}
+                className={`rounded-full px-4 py-2 text-sm font-medium text-white transition-all ${
+                  industry === ind.id
+                    ? 'bg-white/40 border border-white/60'
+                    : 'bg-white/20 border border-white/30 hover:bg-white/30'
+                } ${isLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              >
+                {ind.icon} {ind.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Input */}
           <div id="input" className="w-full">
             <InputArea onGenerate={handleGenerate} isLoading={isLoading} industry={industry} />
           </div>
 
-          {/* Social Proof */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: '24px' }}>👩</span>
-            <span style={{ fontSize: '24px' }}>👩‍🦱</span>
-            <span style={{ fontSize: '24px' }}>👨</span>
-            <span style={{ fontSize: '24px' }}>🧑</span>
-            <span style={{ fontSize: '14px', color: 'rgba(45,77,61,0.9)' }}>
-              <strong style={{ fontWeight: 700 }}>127+ Autohäuser</strong> nutzen es bereits
-            </span>
-          </div>
+          {/* Social Proof – rotating stat */}
+          <button
+            onClick={handleStatClick}
+            className="text-sm text-white/80 hover:text-white transition-colors cursor-pointer select-none"
+            title="Klicken für nächste Statistik"
+          >
+            {WA_STATS[statIndex]}
+          </button>
 
           {/* Error Banner */}
           {error && (
             <div className="w-full animate-fade-in">
-              <div style={{
-                background: 'rgba(239,68,68,0.15)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                borderRadius: '12px',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px',
-              }}>
-                <span style={{ fontSize: '20px', flexShrink: 0 }}>❌</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, color: '#FCA5A5', fontSize: '14px' }}>Fehler beim Generieren</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(252,165,165,0.8)', marginTop: '2px' }}>{error}</p>
+              <div className="bg-red-500/15 border border-red-400/30 rounded-xl p-4 flex items-start gap-3">
+                <span className="text-xl flex-shrink-0">❌</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-300 text-sm">Fehler beim Generieren</p>
+                  <p className="text-xs text-red-300/80 mt-0.5">{error}</p>
                 </div>
                 <button
                   onClick={() => setError(null)}
-                  style={{ color: 'rgba(252,165,165,0.6)', fontSize: '20px', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}
+                  className="text-red-300/60 text-xl leading-none bg-transparent border-0 cursor-pointer"
                 >
                   ×
                 </button>
@@ -322,7 +227,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Output Section */}
+          {/* Output */}
           <div id="output" className="w-full">
             <OutputArea
               result={result}
@@ -332,89 +237,75 @@ export default function Home() {
               onEdit={handleEdit}
             />
           </div>
-
-          {/* ───── Section A: Was macht eine gute WhatsApp-Nachricht aus? ───── */}
-          <div style={sectionContainerStyle}>
-            <h2 style={sectionHeadlineStyle}>Schreib wie ein Freund, nicht wie ein Newsletter.</h2>
-            <p style={sectionSubtextStyle}>
-              Die beste WhatsApp-Nachricht klingt nicht nach Marketing. Sie klingt nach dir.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
-              {GOOD_MESSAGE_POINTS.map((pt) => (
-                <div key={pt.title} style={itemCardStyle}>
-                  <span style={itemIconStyle}>{pt.icon}</span>
-                  <div>
-                    <div style={itemTitleStyle}>{pt.title}</div>
-                    <div style={itemDescStyle}>{pt.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ───── Section B: So funktioniert's ───── */}
-          <div style={sectionContainerStyle}>
-            <h2 style={sectionHeadlineStyle}>So funktioniert&apos;s</h2>
-            <p style={sectionSubtextStyle}>In 3 Schritten zur perfekten WhatsApp-Nachricht.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {STEPS.map((s) => (
-                <div key={s.step} style={itemCardStyle}>
-                  <div style={{
-                    flexShrink: 0,
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.25)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                  }}>
-                    {s.step}
-                  </div>
-                  <div>
-                    <div style={itemTitleStyle}>{s.icon} {s.title}</div>
-                    <div style={itemDescStyle}>{s.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ───── Section C: Je mehr du sendest ───── */}
-          <div style={sectionContainerStyle}>
-            <h2 style={sectionHeadlineStyle}>Dein System lernt mit.</h2>
-            <p style={sectionSubtextStyle}>
-              Jede Antwort deiner Kunden macht das System schlauer – vollautomatisch.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-              {LEARNING_POINTS.map((pt) => (
-                <div key={pt.title} style={itemCardStyle}>
-                  <span style={itemIconStyle}>{pt.icon}</span>
-                  <div>
-                    <div style={itemTitleStyle}>{pt.title}</div>
-                    <div style={itemDescStyle}>{pt.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
-      </main>
+      </section>
 
-      {/* Footer */}
-      <footer style={{
-        paddingTop: '16px',
-        paddingBottom: '16px',
-        borderTop: '1px solid rgba(255,255,255,0.15)',
-        textAlign: 'center',
-      }}>
-        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-          WhatsApp Message Optimizer · Powered by Claude AI
-        </p>
+      {/* ── Section A: Was macht eine gute WhatsApp-Nachricht aus? ────────── */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-3">
+            Schreib wie ein Freund, nicht wie ein Newsletter.
+          </h2>
+          <p className="text-gray-500 text-center mb-10 max-w-xl mx-auto">
+            Die beste WhatsApp-Nachricht klingt nicht nach Marketing. Sie klingt nach dir.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {GOOD_MESSAGE_POINTS.map((point, i) => (
+              <div key={i} className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex gap-4">
+                <div className="text-3xl flex-shrink-0">{point.icon}</div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-1">{point.title}</h3>
+                  <p className="text-sm text-gray-500">{point.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section B: So funktioniert's ──────────────────────────────────── */}
+      <section className="py-12 px-4 bg-gray-50">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-8">So funktioniert&apos;s</h2>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {STEPS.map((s) => (
+              <div key={s.step} className="text-center">
+                <div className="w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg shadow-green-200">
+                  {s.icon}
+                </div>
+                <h3 className="font-semibold text-gray-800 mb-2">
+                  <span className="text-[#25D366] font-bold mr-1">{s.step}.</span>
+                  {s.title}
+                </h3>
+                <p className="text-sm text-gray-500">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section C: Dein System lernt mit ─────────────────────────────── */}
+      <section className="py-16 px-4 bg-gradient-to-br from-[#075E54] to-[#25D366]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Dein System lernt mit.</h2>
+          <p className="text-white/80 mb-10 max-w-xl mx-auto">
+            Jede Antwort deiner Kunden macht das System schlauer – vollautomatisch.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {LEARNING_POINTS.map((p, i) => (
+              <div key={i} className="bg-white/15 backdrop-blur rounded-2xl p-5 border border-white/20 text-left">
+                <div className="text-3xl mb-3">{p.icon}</div>
+                <h3 className="font-semibold text-white mb-1">{p.title}</h3>
+                <p className="text-sm text-white/70">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer className="py-6 px-4 bg-gray-900 text-center">
+        <p className="text-gray-400 text-sm">© 2026 ChatRevenue · WhatsApp Message Optimizer</p>
       </footer>
     </div>
   );

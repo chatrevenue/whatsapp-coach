@@ -47,7 +47,7 @@ interface InputAreaProps {
 export default function InputArea({ onGenerate, isLoading, industry = 'autohaus' }: InputAreaProps) {
   const [message, setMessage] = useState('');
   const [goal, setGoal] = useState<Goal>(null);
-  const [isHoveringBtn, setIsHoveringBtn] = useState(false);
+
 
   const handleSubmit = () => {
     if (!message.trim() || isLoading) return;
@@ -164,31 +164,11 @@ export default function InputArea({ onGenerate, isLoading, industry = 'autohaus'
         <button
           onClick={handleSubmit}
           disabled={isDisabled}
-          onMouseEnter={() => setIsHoveringBtn(true)}
-          onMouseLeave={() => setIsHoveringBtn(false)}
-          style={{
-            width: '100%',
-            height: '52px',
-            background: isDisabled
-              ? 'rgba(255,255,255,0.1)'
-              : isHoveringBtn
-                ? 'rgba(255,255,255,0.3)'
-                : 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            border: isDisabled
-              ? '2px solid rgba(255,255,255,0.2)'
-              : '2px solid rgba(255,255,255,0.6)',
-            color: isDisabled ? 'rgba(255,255,255,0.4)' : 'white',
-            fontSize: '16px',
-            fontWeight: 700,
-            cursor: isDisabled ? 'not-allowed' : 'pointer',
-            marginTop: '16px',
-            transition: 'all 0.15s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
+          className={`w-full py-4 font-bold text-base rounded-xl transition-colors mt-4 flex items-center justify-center gap-2 ${
+            isDisabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-[#25D366] hover:bg-[#1DA851] text-white cursor-pointer'
+          }`}
         >
           {isLoading ? (
             <>⏳ Optimiert...</>
