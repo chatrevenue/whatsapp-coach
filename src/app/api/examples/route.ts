@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       pairs = qr.map((btn: string, idx: number) => ({
         button: btn,
         autoResponse: ar[idx] ?? '',
+        clicks: 0,
       }));
     }
 

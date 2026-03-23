@@ -1,6 +1,7 @@
 export interface QuickReplyPair {
   button: string;       // max 20 Zeichen
   autoResponse: string; // automatische Antwort auf Button-Klick
+  clicks?: number;      // Klicks auf diesen Button (optional, backward compat)
 }
 
 export interface MessageExample {

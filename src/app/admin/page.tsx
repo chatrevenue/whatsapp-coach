@@ -136,7 +136,7 @@ function ExampleModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const updatePair = (idx: number, field: keyof QuickReplyPair, value: string) => {
+  const updatePair = (idx: number, field: keyof QuickReplyPair, value: string | number | undefined) => {
     setForm((f) => {
       const pairs = [...f.quickReplyPairs];
       pairs[idx] = { ...pairs[idx], [field]: value };
@@ -163,10 +163,11 @@ function ExampleModal({
     setError('');
 
     const pairs = form.quickReplyPairs.filter((p) => p.button.trim());
+    const totalClicks = pairs.reduce((sum, p) => sum + (p.clicks || 0), 0);
     const stats = {
       sent: parseInt(form.sent || '0', 10),
       opened: parseInt(form.opened || '0', 10),
-      responded: parseInt(form.responded || '0', 10),
+      responded: totalClicks > 0 ? totalClicks : parseInt(form.responded || '0', 10),
       notes: form.notes,
     };
 
@@ -210,10 +211,12 @@ function ExampleModal({
     }
   };
 
+  const totalClicks = form.quickReplyPairs.reduce((sum, p) => sum + (p.clicks || 0), 0);
+  const autoResponded = totalClicks > 0 ? totalClicks : null;
   const statsPreview = {
     sent: parseInt(form.sent || '0', 10),
     opened: parseInt(form.opened || '0', 10),
-    responded: parseInt(form.responded || '0', 10),
+    responded: autoResponded !== null ? autoResponded : parseInt(form.responded || '0', 10),
     notes: form.notes,
   };
   const previewScore = calculateScore(statsPreview);
@@ -303,6 +306,17 @@ function ExampleModal({
                     placeholder="Automatische Antwort auf Button-Klick..."
                     className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-green-500 resize-none"
                   />
+                  <div className="flex items-center gap-2 mt-2">
+                    <label className="text-xs text-gray-500 whitespace-nowrap">Klicks:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={pair.clicks ?? ''}
+                      onChange={(e) => updatePair(idx, 'clicks', e.target.value === '' ? undefined : parseInt(e.target.value))}
+                      placeholder="0"
+                      className="w-24 border border-gray-300 rounded-lg px-2 py-1 text-sm text-gray-900 bg-white"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -348,15 +362,24 @@ function ExampleModal({
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">Geantwortet</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  💬 Geantwortet
+                  {autoResponded !== null && (
+                    <span className="ml-2 text-green-600 text-xs">(auto: {autoResponded})</span>
+                  )}
+                </label>
                 <input
                   type="number"
                   min="0"
-                  value={form.responded}
-                  onChange={(e) => setForm({ ...form, responded: e.target.value })}
+                  value={autoResponded !== null ? autoResponded : form.responded}
+                  readOnly={autoResponded !== null}
+                  onChange={(e) => { if (autoResponded === null) setForm(f => ({ ...f, responded: e.target.value })); }}
                   placeholder="45"
-                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+                  className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white ${autoResponded !== null ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                 />
+                {autoResponded !== null && (
+                  <p className="text-xs text-gray-400 mt-1">Automatisch aus Button-Klicks berechnet</p>
+                )}
               </div>
             </div>
           </div>
@@ -885,6 +908,15 @@ export default function AdminPage() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1 truncate">{ex.message}</p>
+                        {ex.quickReplyPairs?.some(p => (p.clicks || 0) > 0) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {ex.quickReplyPairs.map((p, i) => (
+                              <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                {p.button}: {p.clicks || 0}x
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
                           <span>✉️ Verschickt: <strong className="text-gray-800">{sent}</strong></span>
                           <span>📬 Geöffnet: <strong className="text-gray-800">{opened}</strong>{openPct && ` (${openPct}%)`}</span>

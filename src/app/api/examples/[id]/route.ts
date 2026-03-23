@@ -46,6 +46,14 @@ export async function PUT(
       pairs = qr.map((btn: string, idx: number) => ({
         button: btn,
         autoResponse: ar[idx] ?? '',
+        clicks: 0,
+      }));
+    } else {
+      // Preserve clicks from incoming payload (already in pairs objects)
+      pairs = pairs.map((p: { button: string; autoResponse: string; clicks?: number }) => ({
+        button: p.button,
+        autoResponse: p.autoResponse,
+        ...(p.clicks !== undefined ? { clicks: p.clicks } : {}),
       }));
     }
 

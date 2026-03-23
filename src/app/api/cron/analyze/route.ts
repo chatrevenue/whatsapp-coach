@@ -122,18 +122,39 @@ async function analyzeIndustries(
           const sent = ex.stats.sent ?? 0;
           const openPct = sent > 0 ? Math.round((ex.stats.opened / sent) * 100) : '?';
           const respPct = sent > 0 ? Math.round((ex.stats.responded / sent) * 100) : '?';
-          return `Beispiel ${i + 1} (Score: ${ex.score ?? 0}):\nNachricht: "${ex.message}"\nÖffnungsrate: ${openPct}%\nAntwortrate: ${respPct}%`;
+
+          const totalClicks = ex.quickReplyPairs?.reduce((s, p) => s + (p.clicks || 0), 0) || 0;
+          const buttonDistribution = totalClicks > 0
+            ? ex.quickReplyPairs?.map(p =>
+                `"${p.button}": ${Math.round((p.clicks || 0) / totalClicks * 100)}%`
+              ).join(', ')
+            : 'keine Klick-Daten';
+
+          return `Beispiel ${i + 1} (Score: ${ex.score ?? 0}):
+Nachricht: "${ex.message.substring(0, 100)}"
+Verschickt: ${sent} | Geöffnet: ${openPct}% | Beantwortet: ${respPct}%
+Button-Klick-Verteilung: ${buttonDistribution}`;
         })
         .join('\n\n');
 
       const response = await client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 300,
+        max_tokens: 400,
         system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und direkt.',
         messages: [
           {
             role: 'user',
-            content: `Analysiere diese ${top5.length} WhatsApp-Nachrichten für die Branche "${industry}". Was machen die Top-Performer besser als die anderen? Gib max. 3 konkrete, umsetzbare Erkenntnisse in 2-3 kurzen Sätzen.\n\n${examplesText}`,
+            content: `Analysiere diese ${top5.length} WhatsApp-Nachrichten für "${industry}".
+
+Berücksichtige dabei:
+1. Welche Button-Kombinationen haben die höchste Gesamtklickrate?
+2. Gibt es "Decoy-Buttons" (einer bekommt fast alle Klicks)? Wann funktioniert das?
+3. Was für Button-Strategien passen zu welchen Nachrichtentypen?
+4. Was machen die Top-Performer generell besser?
+
+Gib max. 4 konkrete, umsetzbare Erkenntnisse – auch zu Button-Strategien.
+
+${examplesText}`,
           },
         ],
       });
