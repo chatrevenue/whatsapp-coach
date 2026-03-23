@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTopExamples, createExample } from '@/lib/kv';
 import type { Industry } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -73,18 +75,8 @@ export async function POST(req: NextRequest) {
       stats: normalizedStats,
     });
 
-    // Fire-and-forget: Analyse triggern wenn stats vorhanden
-    if (normalizedStats.sent > 0) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-      fetch(`${appUrl}/api/cron/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': process.env.ADMIN_PASSWORD ?? '',
-        },
-        body: JSON.stringify({ industry: example.industry }),
-      }).catch(() => {});
-    }
+    // Note: analysis is triggered manually from admin panel or via cron.
+    // Fire-and-forget self-fetch is unreliable on Vercel serverless.
 
     return NextResponse.json({ example }, { status: 201 });
   } catch (err) {

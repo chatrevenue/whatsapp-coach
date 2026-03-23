@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+
+export const dynamic = 'force-dynamic';
 import { buildSystemPrompt } from '@/lib/system-prompts';
 import { getTopExamples, getGlobalInstructions, getInsight } from '@/lib/kv';
 import type { Industry, OptimizeRequest, OptimizeResponse, IndustryInstructions } from '@/lib/types';

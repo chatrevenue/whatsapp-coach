@@ -46,8 +46,8 @@ function normalizeExample(raw: unknown): MessageExample {
     responded,
     notes: typeof rawStats.notes === 'string' ? rawStats.notes : '',
     // keep legacy fields for backward compat
-    openRate: openRate ?? undefined,
-    responseRate: responseRate ?? undefined,
+    openRate: openRate,
+    responseRate: responseRate,
     sentCount: typeof rawStats.sentCount === 'number' ? rawStats.sentCount : sent,
   };
 

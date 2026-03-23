@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getExampleById, updateExample, deleteExample } from '@/lib/kv';
 import { calculateScore } from '@/lib/scoring';
 
+export const dynamic = 'force-dynamic';
+
 function isAuthorized(req: NextRequest): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) return true;
@@ -84,18 +86,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Beispiel nicht gefunden.' }, { status: 404 });
     }
 
-    // Fire-and-forget: Analyse triggern wenn stats vorhanden
-    if (normalizedStats && normalizedStats.sent > 0) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-      fetch(`${appUrl}/api/cron/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': process.env.ADMIN_PASSWORD ?? '',
-        },
-        body: JSON.stringify({ industry: updated.industry }),
-      }).catch(() => {});
-    }
+    // Note: analysis is triggered manually from admin panel or via cron.
+    // Fire-and-forget self-fetch is unreliable on Vercel serverless.
 
     return NextResponse.json({ example: updated });
   } catch (err) {

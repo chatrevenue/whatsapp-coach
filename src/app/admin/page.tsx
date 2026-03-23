@@ -460,19 +460,13 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     setLoading(true);
     setError('');
     try {
-      const [instrRes, insightRes] = await Promise.all([
-        fetch(`/api/instructions?industry=${ind}`),
-        fetch(`/api/instructions/global`), // we also refresh global
-      ]);
+      const instrRes = await fetch(`/api/instructions?industry=${ind}`);
       const instrData = await instrRes.json() as { instructions?: IndustryInstructions | null };
       if (instrData.instructions) {
         setAdditionalInstructions(instrData.instructions.additionalInstructions ?? '');
       } else {
         setAdditionalInstructions('');
       }
-      // Load insight separately
-      const insightFetch = await fetch(`/api/instructions?industry=${ind}`).catch(() => null);
-      void insightFetch; // we'll load it via dedicated endpoint below
     } catch {
       setError('Fehler beim Laden.');
     } finally {
@@ -480,31 +474,12 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     }
   }, []);
 
-  // Load insight for selected industry
+  // Load insight for selected industry from the insights endpoint
   const loadInsight = useCallback(async (ind: Industry) => {
     try {
-      const res = await fetch(`/api/cron/analyze?industry=${ind}`, {
-        method: 'GET',
-        // We don't want to trigger analysis, so we'll load via a dedicated insight endpoint
-        // But since we don't have one, we skip for now - insights load via KV directly
-      });
-      void res;
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Actually load insight from KV via a small trick: expose it via instructions endpoint
-  // Instead, let's add a dedicated endpoint or load it in the analyze route
-  // We'll use a client-side state that loads from the analyze POST response
-  // For now: load insight by calling GET to an endpoint we'll reuse
-  const fetchInsight = useCallback(async (ind: Industry) => {
-    try {
-      // We use a query param to get just the insight via the cron route acting as GET
-      // Since GET on cron/analyze runs full analysis, we instead need a lighter fetch
-      // We'll piggyback on the existing KV via a new endpoint - but since we don't have one,
-      // we'll just leave insight null initially and set it after triggerAnalysis
-      void ind;
+      const res = await fetch(`/api/insights?industry=${ind}`);
+      const data = await res.json() as { insight?: IndustryInsight | null };
+      setInsight(data.insight ?? null);
     } catch {
       // ignore
     }
@@ -517,11 +492,8 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
   useEffect(() => {
     loadInstructions(industry);
-    fetchInsight(industry);
-    setInsight(null); // reset when switching industry
-  }, [industry, loadInstructions, fetchInsight]);
-
-  void loadInsight;
+    loadInsight(industry);
+  }, [industry, loadInstructions, loadInsight]);
 
   const handleSave = async () => {
     setSaving(true);

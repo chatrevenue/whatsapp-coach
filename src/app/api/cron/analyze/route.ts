@@ -3,6 +3,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getExamplesForIndustry, saveInsight, getInsight } from '@/lib/kv';
 import type { IndustryInsight } from '@/lib/kv';
 
+export const dynamic = 'force-dynamic';
+
 const INDUSTRIES = ['autohaus', 'restaurant', 'fitnessstudio', 'andere'];
 
 // GET: Vercel Cron (prüft Authorization: Bearer CRON_SECRET)

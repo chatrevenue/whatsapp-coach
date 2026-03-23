@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { IndustryInstructions } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 function isKvAvailable(): boolean {
   return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }

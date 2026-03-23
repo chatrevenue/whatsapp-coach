@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
+
+export const dynamic = 'force-dynamic';
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false }, { status: 200 });
     }
 
-    const valid = password === adminPassword;
+    const valid = safeEqual(password, adminPassword);
     return NextResponse.json({ valid }, { status: 200 });
   } catch (err) {
     console.error('[POST /api/admin/auth]', err);
