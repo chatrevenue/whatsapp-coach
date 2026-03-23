@@ -1,10 +1,80 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Header from '@/components/Header';
 import InputArea, { type Goal, type Tone } from '@/components/InputArea';
 import OutputArea, { type OutputMessage } from '@/components/OutputArea';
 import type { Industry } from '@/lib/types';
-import { INDUSTRIES } from '@/lib/types';
+
+const GOOD_MESSAGE_POINTS = [
+  { icon: '👋', title: 'Persönlich & kurz', desc: 'Max. 2-3 Sätze. Kein Roman. Kein Newsletter-Stil.' },
+  { icon: '❓', title: 'Immer eine Frage', desc: 'Jede Nachricht endet mit einer einfachen Frage – beantwortet über Quick-Reply-Buttons.' },
+  { icon: '🎯', title: 'Infos kommen danach', desc: 'Produkt, Preis, Details – alles kommt erst in der automatischen Antwort auf den Button-Klick.' },
+  { icon: '🤝', title: 'Kein Verkaufsdruck', desc: 'Die erste Nachricht macht neugierig. Nicht aufdringlich.' },
+];
+
+const STEPS = [
+  { step: '1', icon: '✍️', title: 'Kurz beschreiben', desc: 'Was willst du kommunizieren? Ein Satz reicht.' },
+  { step: '2', icon: '🤖', title: 'KI optimiert', desc: 'Claude verwandelt es in eine WhatsApp-freundliche Nachricht mit Quick-Replies.' },
+  { step: '3', icon: '📋', title: 'Kopieren & senden', desc: 'Alles einzeln kopierbar – direkt in ChatRevenue einfügen.' },
+];
+
+const LEARNING_POINTS = [
+  { icon: '💾', title: 'Antworten werden gespeichert', desc: 'Was deine Kunden antworten, wird analysiert und gemerkt.' },
+  { icon: '🧠', title: 'Personalisierung wächst', desc: 'Mit der Zeit weiß das System, was bei welchem Kunden ankommt.' },
+  { icon: '📈', title: 'Bessere Ergebnisse', desc: 'Öffnungsraten, Klickraten, Antworten – alles steigt.' },
+];
+
+const sectionContainerStyle: React.CSSProperties = {
+  marginTop: '48px',
+  background: 'rgba(255,255,255,0.12)',
+  backdropFilter: 'blur(12px)',
+  borderRadius: '20px',
+  border: '1px solid rgba(255,255,255,0.2)',
+  padding: '32px',
+  width: '100%',
+};
+
+const sectionHeadlineStyle: React.CSSProperties = {
+  color: 'white',
+  fontSize: '24px',
+  fontWeight: 700,
+  marginBottom: '8px',
+};
+
+const sectionSubtextStyle: React.CSSProperties = {
+  color: 'rgba(255,255,255,0.75)',
+  fontSize: '15px',
+  marginBottom: '24px',
+};
+
+const itemCardStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.15)',
+  borderRadius: '12px',
+  padding: '16px',
+  display: 'flex',
+  gap: '12px',
+  alignItems: 'flex-start',
+};
+
+const itemIconStyle: React.CSSProperties = {
+  fontSize: '24px',
+  flexShrink: 0,
+  lineHeight: 1,
+};
+
+const itemTitleStyle: React.CSSProperties = {
+  color: 'white',
+  fontWeight: 600,
+  fontSize: '14px',
+  marginBottom: '4px',
+};
+
+const itemDescStyle: React.CSSProperties = {
+  color: 'rgba(255,255,255,0.7)',
+  fontSize: '13px',
+  lineHeight: 1.5,
+};
 
 export default function Home() {
   const [industry, setIndustry] = useState<Industry>('autohaus');
@@ -105,41 +175,64 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Floating Decorative Icons */}
+      {/* Background Glassmorphism Icons */}
       <div style={{
-        position: 'fixed', top: '24px', left: '24px', zIndex: 10,
-        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
-        padding: '12px', fontSize: '28px', lineHeight: 1,
+        position: 'fixed', top: '24px', left: '24px', zIndex: 0,
+        background: 'rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '20px',
+        padding: '16px',
+        fontSize: '36px',
+        lineHeight: 1,
         pointerEvents: 'none',
       }}>💬</div>
 
       <div style={{
-        position: 'fixed', top: '24px', right: '24px', zIndex: 10,
-        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
-        padding: '12px', fontSize: '28px', lineHeight: 1,
+        position: 'fixed', top: '24px', right: '24px', zIndex: 0,
+        background: 'rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '20px',
+        padding: '16px',
+        fontSize: '36px',
+        lineHeight: 1,
         pointerEvents: 'none',
       }}>🚗</div>
 
       <div style={{
-        position: 'fixed', bottom: '24px', left: '24px', zIndex: 10,
-        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
-        padding: '12px', fontSize: '28px', lineHeight: 1,
+        position: 'fixed', bottom: '24px', left: '24px', zIndex: 0,
+        background: 'rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '20px',
+        padding: '16px',
+        fontSize: '36px',
+        lineHeight: 1,
         pointerEvents: 'none',
       }}>📅</div>
 
       <div style={{
-        position: 'fixed', bottom: '24px', right: '24px', zIndex: 10,
-        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px',
-        padding: '12px', fontSize: '28px', lineHeight: 1,
+        position: 'fixed', bottom: '24px', right: '24px', zIndex: 0,
+        background: 'rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '20px',
+        padding: '16px',
+        fontSize: '36px',
+        lineHeight: 1,
         pointerEvents: 'none',
       }}>✅</div>
 
+      {/* Sticky Header */}
+      <Header
+        industry={industry}
+        onIndustryChange={handleIndustryChange}
+        disabled={isLoading}
+      />
+
       {/* Main Content */}
-      <main className="relative flex flex-col items-center px-4 pt-12 pb-16">
+      <main className="relative flex flex-col items-center px-4 pt-10 pb-16">
         {/* Max-width container */}
         <div style={{ width: '100%', maxWidth: '620px' }} className="flex flex-col items-center gap-6">
 
@@ -180,39 +273,9 @@ export default function Home() {
             KI optimiert deine WhatsApp-Nachrichten nach dem Hormozi-Framework – speziell für Autohäuser entwickelt.
           </p>
 
-          {/* Industry Selector Pills */}
-          <div className="flex flex-wrap gap-2 justify-center">
-            {INDUSTRIES.map((ind) => (
-              <button
-                key={ind.id}
-                onClick={() => handleIndustryChange(ind.id)}
-                disabled={isLoading}
-                style={{
-                  borderRadius: '50px',
-                  padding: '6px 16px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  border: industry === ind.id
-                    ? '1px solid rgba(255,255,255,0.5)'
-                    : '1px solid rgba(255,255,255,0.2)',
-                  background: industry === ind.id
-                    ? 'rgba(255,255,255,0.25)'
-                    : 'rgba(255,255,255,0.1)',
-                  color: industry === ind.id
-                    ? 'white'
-                    : 'rgba(255,255,255,0.7)',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {ind.icon} {ind.label}
-              </button>
-            ))}
-          </div>
-
           {/* Input Section */}
           <div id="input" className="w-full">
-            <InputArea onGenerate={handleGenerate} isLoading={isLoading} />
+            <InputArea onGenerate={handleGenerate} isLoading={isLoading} industry={industry} />
           </div>
 
           {/* Social Proof */}
@@ -268,6 +331,75 @@ export default function Home() {
               onImprove={handleImprove}
               onEdit={handleEdit}
             />
+          </div>
+
+          {/* ───── Section A: Was macht eine gute WhatsApp-Nachricht aus? ───── */}
+          <div style={sectionContainerStyle}>
+            <h2 style={sectionHeadlineStyle}>Schreib wie ein Freund, nicht wie ein Newsletter.</h2>
+            <p style={sectionSubtextStyle}>
+              Die beste WhatsApp-Nachricht klingt nicht nach Marketing. Sie klingt nach dir.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+              {GOOD_MESSAGE_POINTS.map((pt) => (
+                <div key={pt.title} style={itemCardStyle}>
+                  <span style={itemIconStyle}>{pt.icon}</span>
+                  <div>
+                    <div style={itemTitleStyle}>{pt.title}</div>
+                    <div style={itemDescStyle}>{pt.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ───── Section B: So funktioniert's ───── */}
+          <div style={sectionContainerStyle}>
+            <h2 style={sectionHeadlineStyle}>So funktioniert&apos;s</h2>
+            <p style={sectionSubtextStyle}>In 3 Schritten zur perfekten WhatsApp-Nachricht.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {STEPS.map((s) => (
+                <div key={s.step} style={itemCardStyle}>
+                  <div style={{
+                    flexShrink: 0,
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                  }}>
+                    {s.step}
+                  </div>
+                  <div>
+                    <div style={itemTitleStyle}>{s.icon} {s.title}</div>
+                    <div style={itemDescStyle}>{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ───── Section C: Je mehr du sendest ───── */}
+          <div style={sectionContainerStyle}>
+            <h2 style={sectionHeadlineStyle}>Dein System lernt mit.</h2>
+            <p style={sectionSubtextStyle}>
+              Jede Antwort deiner Kunden macht das System schlauer – vollautomatisch.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              {LEARNING_POINTS.map((pt) => (
+                <div key={pt.title} style={itemCardStyle}>
+                  <span style={itemIconStyle}>{pt.icon}</span>
+                  <div>
+                    <div style={itemTitleStyle}>{pt.title}</div>
+                    <div style={itemDescStyle}>{pt.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
         </div>

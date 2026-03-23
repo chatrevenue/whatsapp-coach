@@ -1,17 +1,35 @@
 'use client';
 
 import { useState } from 'react';
+import type { Industry } from '@/lib/types';
 
 type Goal = 'verkauf' | 'erinnerung' | 'event' | 'followup' | null;
 type Tone = 'locker' | 'freundlich' | 'verkaufsstark' | null;
 
 export { type Goal, type Tone };
 
-const EXAMPLES = [
-  { label: '🍽️ Aktion im Restaurant', text: 'Wir haben diese Woche ein besonderes Mittagsmenü' },
-  { label: '📅 Event Einladung', text: 'Wir laden zum Tag der offenen Tür ein' },
-  { label: '🔄 Follow-up nach Termin', text: 'Ich wollte kurz nachfragen wie alles gelaufen ist' },
-];
+const EXAMPLES_BY_INDUSTRY: Record<string, { label: string; text: string }[]> = {
+  autohaus: [
+    { label: '🔧 Frühlingscheck', text: 'Wir haben diese Woche noch freie Termine für den Frühlingscheck' },
+    { label: '🚗 Neues Modell', text: 'Unser neuer Elektro-SUV ist ab sofort bei uns verfügbar' },
+    { label: '❄️ Reifenwechsel', text: 'Die Wintersaison ist vorbei – Zeit für Sommerreifen' },
+  ],
+  restaurant: [
+    { label: '🍽️ Mittagsmenü', text: 'Heute haben wir ein besonderes Mittagsmenü' },
+    { label: '🎉 Event', text: 'Nächsten Freitag ist Weinabend bei uns im Lokal' },
+    { label: '🔥 Wochenspecial', text: 'Dieses Wochenende gibt es unser Hausspecial zum Aktionspreis' },
+  ],
+  fitnessstudio: [
+    { label: '💪 Kursangebot', text: 'Nächste Woche startet unser neuer HIIT-Kurs' },
+    { label: '🎯 Probetraining', text: 'Bring einen Freund mit – kostenlos probetrainieren' },
+    { label: '⚡ Challenge', text: 'Wir starten eine 30-Tage Challenge – bist du dabei?' },
+  ],
+  andere: [
+    { label: '📅 Event Einladung', text: 'Wir laden zu unserem Tag der offenen Tür ein' },
+    { label: '🎁 Angebot', text: 'Nur diese Woche: 20% Rabatt auf alle Produkte' },
+    { label: '🔄 Follow-up', text: 'Ich wollte kurz nachfragen wie alles bei dir läuft' },
+  ],
+};
 
 const GOALS: { id: Goal; label: string }[] = [
   { id: 'verkauf', label: 'Verkauf' },
@@ -20,25 +38,20 @@ const GOALS: { id: Goal; label: string }[] = [
   { id: 'followup', label: 'Follow-up' },
 ];
 
-const TONES: { id: Tone; label: string }[] = [
-  { id: 'locker', label: 'Locker' },
-  { id: 'freundlich', label: 'Freundlich' },
-  { id: 'verkaufsstark', label: 'Verkaufsstark' },
-];
-
 interface InputAreaProps {
   onGenerate: (message: string, goal: Goal, tone: Tone) => void;
   isLoading: boolean;
+  industry?: Industry;
 }
 
-export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
+export default function InputArea({ onGenerate, isLoading, industry = 'autohaus' }: InputAreaProps) {
   const [message, setMessage] = useState('');
   const [goal, setGoal] = useState<Goal>(null);
-  const [tone, setTone] = useState<Tone>(null);
+  const [isHoveringBtn, setIsHoveringBtn] = useState(false);
 
   const handleSubmit = () => {
     if (!message.trim() || isLoading) return;
-    onGenerate(message.trim(), goal, tone);
+    onGenerate(message.trim(), goal, null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -51,21 +64,9 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
     setMessage(text);
   };
 
-  const pillStyle = (active: boolean) => ({
-    borderRadius: '50px',
-    padding: '6px 14px',
-    fontSize: '13px',
-    fontWeight: active ? 600 : 400,
-    cursor: 'pointer',
-    border: active
-      ? '1px solid rgba(255,255,255,0.6)'
-      : '1px solid rgba(255,255,255,0.3)',
-    background: active
-      ? 'rgba(255,255,255,0.35)'
-      : 'rgba(255,255,255,0.15)',
-    color: active ? 'white' : 'rgba(255,255,255,0.9)',
-    transition: 'all 0.15s ease',
-  } as React.CSSProperties);
+  const examples = EXAMPLES_BY_INDUSTRY[industry] ?? EXAMPLES_BY_INDUSTRY.andere;
+
+  const isDisabled = !message.trim() || isLoading;
 
   return (
     <div className="w-full">
@@ -83,7 +84,7 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
         </div>
 
         {/* Goal Chips */}
-        <div style={{ marginBottom: '12px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', color: 'rgba(26,46,26,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
             Ziel (optional)
           </div>
@@ -115,39 +116,6 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
           </div>
         </div>
 
-        {/* Tone Chips */}
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', color: 'rgba(26,46,26,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-            Ton (optional)
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {TONES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTone(tone === t.id ? null : t.id)}
-                disabled={isLoading}
-                style={{
-                  borderRadius: '50px',
-                  padding: '5px 12px',
-                  fontSize: '12px',
-                  fontWeight: tone === t.id ? 600 : 400,
-                  cursor: 'pointer',
-                  border: tone === t.id
-                    ? '1px solid #9AE09A'
-                    : '1px solid #E0E8E0',
-                  background: tone === t.id
-                    ? 'rgba(154,224,154,0.2)'
-                    : 'white',
-                  color: tone === t.id ? '#1A3A1A' : '#6B9E6B',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Textarea */}
         <textarea
           value={message}
@@ -174,7 +142,7 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
         {/* Helper Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
           <button
-            onClick={() => handleExampleClick(EXAMPLES[0].text)}
+            onClick={() => handleExampleClick(examples[0].text)}
             disabled={isLoading}
             style={{
               color: '#6B9E6B',
@@ -195,21 +163,26 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
         {/* CTA Button */}
         <button
           onClick={handleSubmit}
-          disabled={!message.trim() || isLoading}
+          disabled={isDisabled}
+          onMouseEnter={() => setIsHoveringBtn(true)}
+          onMouseLeave={() => setIsHoveringBtn(false)}
           style={{
             width: '100%',
             height: '52px',
-            background: !message.trim() || isLoading
-              ? 'rgba(154,224,154,0.5)'
-              : 'linear-gradient(135deg, #9AE09A, #A8E6A0)',
+            background: isDisabled
+              ? 'rgba(255,255,255,0.1)'
+              : isHoveringBtn
+                ? 'rgba(255,255,255,0.3)'
+                : 'rgba(255,255,255,0.2)',
             borderRadius: '12px',
-            border: 'none',
-            color: '#1A3A1A',
+            border: isDisabled
+              ? '2px solid rgba(255,255,255,0.2)'
+              : '2px solid rgba(255,255,255,0.6)',
+            color: isDisabled ? 'rgba(255,255,255,0.4)' : 'white',
             fontSize: '16px',
             fontWeight: 700,
-            cursor: !message.trim() || isLoading ? 'not-allowed' : 'pointer',
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
             marginTop: '16px',
-            boxShadow: '0 2px 8px rgba(100,180,100,0.2)',
             transition: 'all 0.15s ease',
             display: 'flex',
             alignItems: 'center',
@@ -225,9 +198,9 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
         </button>
       </div>
 
-      {/* Example Chips */}
+      {/* Example Chips – branchenspezifisch */}
       <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-        {EXAMPLES.map((ex) => (
+        {examples.map((ex) => (
           <button
             key={ex.label}
             onClick={() => handleExampleClick(ex.text)}
@@ -247,8 +220,6 @@ export default function InputArea({ onGenerate, isLoading }: InputAreaProps) {
           </button>
         ))}
       </div>
-
-      {/* Ziel/Ton Pills also as transparent on green bg — shown as hint below examples */}
     </div>
   );
 }
