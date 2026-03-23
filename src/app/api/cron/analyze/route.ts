@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getExamplesForIndustry, saveInsight } from '@/lib/kv';
+import { getExamplesForIndustry, saveInsight, getInsight } from '@/lib/kv';
 import type { IndustryInsight } from '@/lib/kv';
 
 const INDUSTRIES = ['autohaus', 'restaurant', 'fitnessstudio', 'andere'];
@@ -28,11 +28,73 @@ export async function POST(req: NextRequest) {
 
   const targetIndustry = body.industry;
   const industries = targetIndustry ? [targetIndustry] : INDUSTRIES;
-  const results = await analyzeIndustries(industries);
+  const results = await analyzeIndustries(industries, targetIndustry);
   return NextResponse.json({ ok: true, results });
 }
 
-async function analyzeIndustries(industries: string[]): Promise<Record<string, string>> {
+async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<string, string>) {
+  // Nur wenn mindestens 2 Branchen Insights haben
+  const validInsights = Object.entries(perIndustryInsights).filter(([, v]) => v && v !== 'skip');
+  if (validInsights.length < 2) return;
+
+  // Alle Beispiele aller Branchen mit Stats laden
+  type ExampleWithIndustry = Omit<Awaited<ReturnType<typeof getExamplesForIndustry>>[number], 'industry'> & { industry: string };
+  const allExamples: ExampleWithIndustry[] = [];
+  for (const industry of INDUSTRIES) {
+    const examples = await getExamplesForIndustry(industry);
+    const withStats = examples.filter((e) => (e.stats?.sent ?? 0) > 0);
+    allExamples.push(...withStats.map((e) => ({ ...e, industry } as ExampleWithIndustry)));
+  }
+  if (allExamples.length < 3) return;
+
+  // Top-Performer über alle Branchen
+  const topOverall = [...allExamples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 8);
+
+  const insightsSummary = validInsights.map(([ind, ins]) => `${ind}: ${ins}`).join('\n');
+  const topExamplesText = topOverall
+    .map((ex) => {
+      const sent = ex.stats?.sent ?? 0;
+      const openPct = sent > 0 ? Math.round(((ex.stats?.opened ?? 0) / sent) * 100) : '?';
+      const respPct = sent > 0 ? Math.round(((ex.stats?.responded ?? 0) / sent) * 100) : '?';
+      return `[${ex.industry}] Score ${ex.score ?? 0}: "${ex.message.substring(0, 80)}..." | Öffnung: ${openPct}% | Antwort: ${respPct}%`;
+    })
+    .join('\n');
+
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 400,
+    system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und umsetzbar.',
+    messages: [
+      {
+        role: 'user',
+        content: `Analysiere die Top-Performer über alle Branchen hinweg.
+
+Branchen-Insights:
+${insightsSummary}
+
+Top-Nachrichten aller Branchen:
+${topExamplesText}
+
+Was sind die 3-4 universellen Prinzipien die branchenübergreifend bei WhatsApp-Nachrichten funktionieren?
+Gib konkrete, umsetzbare Regeln die für JEDE Branche gelten.`,
+      },
+    ],
+  });
+
+  const globalInsight = response.content.find((b) => b.type === 'text')?.text ?? '';
+
+  // In KV als "insight:global" speichern – NICHT "instructions:global" (manuell vom User)!
+  await saveInsight('global', {
+    insight: globalInsight,
+    generatedAt: new Date().toISOString(),
+    exampleCount: allExamples.length,
+  });
+}
+
+async function analyzeIndustries(
+  industries: string[],
+  targetIndustry?: string
+): Promise<Record<string, string>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Object.fromEntries(industries.map((ind) => [ind, 'skip (kein API Key)']));
@@ -93,9 +155,25 @@ async function analyzeIndustries(industries: string[]): Promise<Record<string, s
     }
   }
 
+  // Wenn kein targetIndustry (alle Branchen) → globale Analyse nachschalten
+  if (!targetIndustry) {
+    try {
+      const insightMap: Record<string, string> = {};
+      for (const [ind] of Object.entries(results)) {
+        const ins = await getInsight(ind);
+        if (ins) insightMap[ind] = ins.insight;
+      }
+      await analyzeGlobal(client, insightMap);
+      results['global'] = 'ok';
+    } catch (err) {
+      console.error('[cron/analyze] Fehler bei globalAnalysis:', err);
+      results['global'] = `error: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+
   return results;
 }
 
 async function analyzeAllIndustries(): Promise<Record<string, string>> {
-  return analyzeIndustries(INDUSTRIES);
+  return analyzeIndustries(INDUSTRIES, undefined);
 }

@@ -402,6 +402,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
   const [additionalInstructions, setAdditionalInstructions] = useState('');
   const [globalInstructions, setGlobalInstructions] = useState('');
   const [insight, setInsight] = useState<IndustryInsight | null>(null);
+  const [globalInsight, setGlobalInsight] = useState<IndustryInsight | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingGlobal, setSavingGlobal] = useState(false);
@@ -416,6 +417,17 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
       const res = await fetch('/api/instructions/global');
       const data = await res.json() as { instructions?: GlobalInstructions | null };
       setGlobalInstructions(data.instructions?.additionalInstructions ?? '');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Load global cross-industry insight on mount
+  const loadGlobalInsight = useCallback(async () => {
+    try {
+      const res = await fetch('/api/insights?industry=global');
+      const data = await res.json() as { insight?: IndustryInsight | null };
+      setGlobalInsight(data.insight ?? null);
     } catch {
       // ignore
     }
@@ -477,7 +489,8 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
   useEffect(() => {
     loadGlobalInstructions();
-  }, [loadGlobalInstructions]);
+    loadGlobalInsight();
+  }, [loadGlobalInstructions, loadGlobalInsight]);
 
   useEffect(() => {
     loadInstructions(industry);
@@ -533,23 +546,40 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     }
   };
 
-  const triggerAnalysis = async (ind: Industry) => {
+  const triggerAnalysis = async (ind: Industry | undefined) => {
     setAnalyzing(true);
     setError('');
     try {
+      const body: { adminPassword: string; industry?: string } = { adminPassword: adminPw };
+      if (ind) body.industry = ind;
+
       const res = await fetch('/api/cron/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
-        body: JSON.stringify({ industry: ind, adminPassword: adminPw }),
+        body: JSON.stringify(body),
       });
       const data = await res.json() as { ok?: boolean; results?: Record<string, string> };
       if (!res.ok) throw new Error('Analyse fehlgeschlagen.');
-      if (data.results?.[ind] === 'ok') {
-        // Reload insight - we need to poll the route that stores it
-        // Since we don't have a GET insight endpoint, we'll re-trigger and show success
-        setInsight({ insight: '✅ Analyse abgeschlossen. Lade Seite neu, um den Insight zu sehen.', generatedAt: new Date().toISOString(), exampleCount: 0 });
+
+      if (ind) {
+        // Einzelne Branche → Insight nachladen
+        const insightRes = await fetch(`/api/insights?industry=${ind}`);
+        const insightData = await insightRes.json() as { insight?: IndustryInsight | null };
+        if (insightData.insight) {
+          setInsight(insightData.insight);
+        } else {
+          setInsight({ insight: `ℹ️ ${data.results?.[ind] ?? 'Keine Daten'}`, generatedAt: new Date().toISOString(), exampleCount: 0 });
+        }
       } else {
-        setInsight({ insight: `ℹ️ ${data.results?.[ind] ?? 'Keine Daten'}`, generatedAt: new Date().toISOString(), exampleCount: 0 });
+        // Alle Branchen + global → beide nachladen
+        const [insightRes, globalInsightRes] = await Promise.all([
+          fetch(`/api/insights?industry=${industry}`),
+          fetch('/api/insights?industry=global'),
+        ]);
+        const insightData = await insightRes.json() as { insight?: IndustryInsight | null };
+        const globalInsightData = await globalInsightRes.json() as { insight?: IndustryInsight | null };
+        if (insightData.insight) setInsight(insightData.insight);
+        if (globalInsightData.insight) setGlobalInsight(globalInsightData.insight);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler bei Analyse');
@@ -562,6 +592,28 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Globaler Insight (auto-generiert, branchen-übergreifend) */}
+      {globalInsight && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-indigo-800">🌍 Globaler Insight (branchen-übergreifend)</span>
+            <span className="text-xs text-indigo-500">
+              {globalInsight.exampleCount} Nachrichten · {new Date(globalInsight.generatedAt).toLocaleDateString('de-AT')}
+            </span>
+          </div>
+          <p className="text-sm text-indigo-700">{globalInsight.insight}</p>
+        </div>
+      )}
+
+      {/* Alle Branchen analysieren Button */}
+      <button
+        onClick={() => triggerAnalysis(undefined)}
+        disabled={analyzing}
+        className="mb-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+      >
+        {analyzing ? '⏳ Analysiert...' : '🌍 Alle Branchen analysieren (+ global)'}
+      </button>
+
       {/* Globale Instruktionen */}
       <div className="bg-white shadow-sm rounded-2xl p-6">
         <label className="text-sm font-semibold text-gray-800 mb-1 block">
@@ -619,13 +671,13 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
             </div>
           )}
 
-          {/* Analyse-Button */}
+          {/* Einzelne Branche analysieren */}
           <button
             onClick={() => triggerAnalysis(industry)}
             disabled={analyzing}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
           >
-            {analyzing ? '⏳ Analysiert...' : '🔄 Jetzt analysieren'}
+            {analyzing ? '⏳ Analysiert...' : `🔄 ${ind?.label ?? industry} analysieren`}
           </button>
 
           {/* Branchenspezifische Zusatz-Instruktionen */}

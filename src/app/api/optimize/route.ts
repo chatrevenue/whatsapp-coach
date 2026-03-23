@@ -54,15 +54,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load top 3 examples, instructions, global instructions and insight
-    const [examples, instructions, globalInstructions, insight] = await Promise.all([
+    // Load top 3 examples, instructions, global instructions, industry insight, and global insight
+    const [examples, instructions, globalInstructions, insight, globalInsight] = await Promise.all([
       getTopExamples(industry as Industry, 3),
       loadInstructions(industry),
       getGlobalInstructions(),
       getInsight(industry),
+      getInsight('global'),
     ]);
 
-    const systemPrompt = await buildSystemPrompt(industry, examples, instructions, globalInstructions, insight);
+    let systemPrompt = await buildSystemPrompt(industry, examples, instructions, globalInstructions, insight);
+
+    // Globalen Insight anhängen (auto-generiert, kein User-Override)
+    if (globalInsight?.insight) {
+      systemPrompt += `\n\nGLOBALE ERKENNTNISSE (branchenübergreifend):\n${globalInsight.insight}`;
+    }
 
     const client = new Anthropic({ apiKey });
 
