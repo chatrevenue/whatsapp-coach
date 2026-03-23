@@ -723,6 +723,21 @@ export default function AdminPage() {
   const [editTarget, setEditTarget] = useState<MessageExample | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Session-Check beim Mount: Wenn Cookie-Session vorhanden → AuthGate überspringen
+  useEffect(() => {
+    fetch('/api/admin/session')
+      .then((r) => r.json())
+      .then((d: { authenticated?: boolean }) => {
+        if (d.authenticated) {
+          // Cookie-Session aktiv: authed=true setzen, adminPw bleibt leer
+          // User muss beim nächsten API-Call, der x-admin-password braucht, trotzdem Passwort eingeben
+          // → Option A: nur authed=true für UI-State, Passwort-Eingabe nötig für API-Calls
+          setAuthed(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchExamples = useCallback(async (pw: string, ind: Industry | 'all' = 'all') => {
     setLoading(true);
     try {
@@ -751,6 +766,17 @@ export default function AdminPage() {
     setAdminPw(pw);
     setAuthed(true);
     fetchExamples(pw, 'all');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', { method: 'DELETE' });
+    } catch {
+      // ignore
+    }
+    setAuthed(false);
+    setAdminPw('');
+    setExamples([]);
   };
 
   const handleDelete = async (id: string) => {
@@ -801,7 +827,15 @@ export default function AdminPage() {
             <p className="text-xs text-gray-500">WhatsApp Coach</p>
           </div>
         </div>
-        <a href="/" className="text-sm text-green-700 hover:underline font-medium">← Zurück zur App</a>
+        <div className="flex items-center gap-3">
+          <a href="/" className="text-sm text-green-700 hover:underline font-medium">← Zurück zur App</a>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-500 hover:text-red-600 border border-gray-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}

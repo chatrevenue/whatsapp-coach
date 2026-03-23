@@ -62,7 +62,7 @@ async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<stri
     })
     .join('\n');
 
-  const response = await client.messages.create({
+  const response = await withRetry(() => client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 400,
     system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und umsetzbar.',
@@ -81,7 +81,7 @@ Was sind die 3-4 universellen Prinzipien die branchenübergreifend bei WhatsApp-
 Gib konkrete, umsetzbare Regeln die für JEDE Branche gelten.`,
       },
     ],
-  });
+  }));
 
   const globalInsight = response.content.find((b) => b.type === 'text')?.text ?? '';
 
@@ -91,6 +91,20 @@ Gib konkrete, umsetzbare Regeln die für JEDE Branche gelten.`,
     generatedAt: new Date().toISOString(),
     exampleCount: allExamples.length,
   });
+}
+
+// Helper für retry mit exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, delayMs = 5000): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      console.warn(`Attempt ${attempt} failed, retrying in ${delayMs * attempt}ms...`, err);
+      await new Promise<void>((r) => setTimeout(r, delayMs * attempt)); // exponential: 5s, 10s, 15s
+    }
+  }
+  throw new Error('unreachable');
 }
 
 async function analyzeIndustries(
@@ -139,7 +153,7 @@ Button-Klick-Verteilung: ${buttonDistribution}`;
         })
         .join('\n\n');
 
-      const response = await client.messages.create({
+      const response = await withRetry(() => client.messages.create({
         model: 'claude-haiku-4-5',
         max_tokens: 400,
         system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und direkt.',
@@ -159,7 +173,7 @@ Gib max. 4 konkrete, umsetzbare Erkenntnisse – auch zu Button-Strategien.
 ${examplesText}`,
           },
         ],
-      });
+      }));
 
       const textBlock = response.content.find((b) => b.type === 'text');
       const insight = textBlock && textBlock.type === 'text' ? textBlock.text : '';

@@ -4,9 +4,22 @@ import Anthropic from '@anthropic-ai/sdk';
 export const dynamic = 'force-dynamic';
 import { buildSystemPrompt } from '@/lib/system-prompts';
 import { getTopExamples, getGlobalInstructions, getInsight } from '@/lib/kv';
+import { checkRateLimit } from '@/lib/ratelimit';
 import type { Industry, OptimizeRequest, OptimizeResponse, IndustryInstructions } from '@/lib/types';
 
 export { type OptimizeRequest, type OptimizeResponse };
+
+const ALLOWED_ORIGIN =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://chatrevenue-whatsapp-coach.vercel.app';
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin === ALLOWED_ORIGIN || !origin; // null = same-origin, immer erlauben
+  return {
+    'Access-Control-Allow-Origin': allowed ? (origin || ALLOWED_ORIGIN) : ALLOWED_ORIGIN,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
 
 async function loadInstructions(industry: string): Promise<IndustryInstructions | null> {
   try {
@@ -21,24 +34,43 @@ async function loadInstructions(industry: string): Promise<IndustryInstructions 
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  return new NextResponse(null, { status: 200, headers: corsHeaders(origin) });
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin');
+
   try {
+    // ── Rate Limiting ──────────────────────────────────────────────────────
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      '127.0.0.1';
+
+    const { success, remaining, reset } = await checkRateLimit(ip);
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: `Zu viele Anfragen. Bitte warte ${Math.ceil((reset - Date.now()) / 1000 / 60)} Minuten.`,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(reset),
+            ...corsHeaders(origin),
+          },
+        }
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'API Key nicht konfiguriert. Bitte ANTHROPIC_API_KEY setzen.' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders(origin) }
       );
     }
 
@@ -46,13 +78,16 @@ export async function POST(req: NextRequest) {
     const { message, history = [], industry = 'autohaus', goal, tone } = body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return NextResponse.json({ error: 'Bitte gib eine Nachricht ein.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Bitte gib eine Nachricht ein.' },
+        { status: 400, headers: corsHeaders(origin) }
+      );
     }
 
     if (message.trim().length > 2000) {
       return NextResponse.json(
         { error: 'Nachricht ist zu lang. Maximal 2000 Zeichen.' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders(origin) }
       );
     }
 
@@ -107,7 +142,9 @@ export async function POST(req: NextRequest) {
       goal ? `ZIEL: ${goalLabels[goal] ?? goal}` : null,
       tone ? `TON: ${toneLabels[tone] ?? tone}` : null,
       `OPTIMIERE: "${message.trim()}"`,
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     messages.push({
       role: 'user',
@@ -159,12 +196,20 @@ export async function POST(req: NextRequest) {
       ? parsed.auto_responses.slice(0, 3).map((r: string) => String(r))
       : [];
 
-    return NextResponse.json({
-      optimized_message: parsed.optimized_message,
-      quick_replies: quickReplies,
-      auto_responses: autoResponses,
-      tip: parsed.tip,
-    });
+    return NextResponse.json(
+      {
+        optimized_message: parsed.optimized_message,
+        quick_replies: quickReplies,
+        auto_responses: autoResponses,
+        tip: parsed.tip,
+      },
+      {
+        headers: {
+          ...corsHeaders(origin),
+          'X-RateLimit-Remaining': String(remaining),
+        },
+      }
+    );
   } catch (error) {
     console.error('[/api/optimize] Error:', error);
 
@@ -172,22 +217,22 @@ export async function POST(req: NextRequest) {
       if (error.status === 401) {
         return NextResponse.json(
           { error: 'API Key ungültig. Bitte prüfe deinen Anthropic API Key.' },
-          { status: 401 }
+          { status: 401, headers: corsHeaders(origin) }
         );
       }
       if (error.status === 429) {
         return NextResponse.json(
           { error: 'Rate Limit erreicht. Bitte warte kurz und versuche es erneut.' },
-          { status: 429 }
+          { status: 429, headers: corsHeaders(origin) }
         );
       }
       return NextResponse.json(
         { error: `API Fehler: ${error.message}` },
-        { status: error.status || 500 }
+        { status: error.status || 500, headers: corsHeaders(origin) }
       );
     }
 
     const message = error instanceof Error ? error.message : 'Unbekannter Fehler aufgetreten.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders(origin) });
   }
 }

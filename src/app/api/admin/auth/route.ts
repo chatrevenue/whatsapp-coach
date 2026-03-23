@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
+import { setAdminSession, clearAdminSession, generateSessionToken } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
+// POST /api/admin/auth - Login
 export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
@@ -22,9 +24,26 @@ export async function POST(req: NextRequest) {
     }
 
     const valid = safeEqual(password, adminPassword);
+
+    if (valid) {
+      const token = generateSessionToken();
+      await setAdminSession(token);
+    }
+
     return NextResponse.json({ valid }, { status: 200 });
   } catch (err) {
     console.error('[POST /api/admin/auth]', err);
     return NextResponse.json({ valid: false, error: 'Server error' }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/auth - Logout
+export async function DELETE() {
+  try {
+    await clearAdminSession();
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (err) {
+    console.error('[DELETE /api/admin/auth]', err);
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
   }
 }
