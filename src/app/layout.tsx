@@ -29,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" className={inter.variable}>
-      <body className="antialiased min-h-screen" style={{ background: 'linear-gradient(135deg, #1B5E50 0%, #2A9D6E 55%, #40C07A 100%)', backgroundAttachment: 'fixed', minHeight: '100vh' }}>
+      <body className="antialiased min-h-screen" style={{ background: 'linear-gradient(135deg, #4A8B7A 0%, #8FBC9A 100%)', backgroundAttachment: 'fixed' }}>
         {children}
       </body>
     </html>

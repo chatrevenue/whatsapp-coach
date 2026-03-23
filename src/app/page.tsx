@@ -161,10 +161,10 @@ export default function Home() {
 
           {/* Heading */}
           <div style={{ textAlign: 'center', lineHeight: 1.15 }}>
-            <div style={{ fontSize: '52px', fontWeight: 800, color: '#E8F5D4' }}>
+            <div style={{ fontSize: '52px', fontWeight: 800, color: '#F0EBDA' }}>
               Mehr Antworten.
             </div>
-            <div style={{ fontSize: '52px', fontWeight: 800, color: '#E8F5D4' }}>
+            <div style={{ fontSize: '52px', fontWeight: 800, color: '#D4E4A0' }}>
               Weniger ignoriert werden.
             </div>
           </div>
