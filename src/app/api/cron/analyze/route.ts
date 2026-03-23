@@ -63,23 +63,27 @@ async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<stri
     })
     .join('\n');
 
+  // Lade bestehenden globalen Insight als Kontext
+  const existingGlobalInsight = await getInsight('global');
+
   const response = await withRetry(() => client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 400,
-    system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und umsetzbar.',
+    system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und umsetzbar. Keine Wiederholungen.',
     messages: [
       {
         role: 'user',
-        content: `Analysiere die Top-Performer über alle Branchen hinweg.
+        content: `Analysiere Top-Performer über alle Branchen hinweg.
 
-Branchen-Insights:
+${existingGlobalInsight?.insight ? `Bisheriger globaler Insight (NICHT wiederholen):\n"${existingGlobalInsight.insight}"\n\n` : ''}Branchen-Insights:
 ${insightsSummary}
 
-Top-Nachrichten aller Branchen:
+Top-Nachrichten:
 ${topExamplesText}
 
-Was sind die 3-4 universellen Prinzipien die branchenübergreifend bei WhatsApp-Nachrichten funktionieren?
-Gib konkrete, umsetzbare Regeln die für JEDE Branche gelten.`,
+Schreibe einen kompakten globalen Insight (max. 4 Punkte, max. 300 Zeichen):
+Welche Prinzipien gelten branchenübergreifend für WhatsApp-Nachrichten?
+Nur neue oder bestätigte Erkenntnisse, keine Wiederholungen.`,
       },
     ],
   }));
@@ -167,24 +171,25 @@ Button-Klick-Verteilung: ${buttonDistribution}`;
         })
         .join('\n\n');
 
+      // Lade bestehenden Insight als Kontext
+      const existingInsight = await getInsight(industry);
+
       const response = await withRetry(() => client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 400,
-        system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und direkt.',
+        max_tokens: 350,
+        system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und direkt. Keine Wiederholungen.',
         messages: [
           {
             role: 'user',
-            content: `Analysiere diese ${top5.length} WhatsApp-Nachrichten für "${industry}".
+            content: `Analysiere diese ${top5.length} WhatsApp-Nachrichten für die Branche "${industry}".
 
-Berücksichtige dabei:
-1. Welche Button-Kombinationen haben die höchste Gesamtklickrate?
-2. Gibt es "Decoy-Buttons" (einer bekommt fast alle Klicks)? Wann funktioniert das?
-3. Was für Button-Strategien passen zu welchen Nachrichtentypen?
-4. Was machen die Top-Performer generell besser?
+${existingInsight?.insight ? `Bisheriger Insight (als Kontext, NICHT wiederholen):\n"${existingInsight.insight}"\n\n` : ''}Neue/aktualisierte Daten:
+${examplesText}
 
-Gib max. 4 konkrete, umsetzbare Erkenntnisse – auch zu Button-Strategien.
-
-${examplesText}`,
+Schreibe einen kompakten, aktualisierten Insight (max. 4 Punkte, max. 300 Zeichen):
+- Was funktioniert gut (Button-Strategien, Tonalität, Struktur)?
+- Was sollte vermieden werden?
+Keine Wiederholung des bisherigen Insights. Nur neue oder bestätigte Erkenntnisse.`,
           },
         ],
       }));

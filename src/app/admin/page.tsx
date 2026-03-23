@@ -585,31 +585,46 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
   const ind = INDUSTRIES.find((i) => i.id === industry);
 
+  const selectedIndustryLabel = ind?.label ?? industry;
+
   return (
     <div className="space-y-6">
-      {/* Globaler Insight (auto-generiert, branchen-übergreifend) */}
-      {globalInsight && (
+      {/* 1. Globaler Insight Box (immer oben) */}
+      {globalInsight ? (
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-indigo-800">🌍 Globaler Insight (branchen-übergreifend)</span>
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <span className="text-sm font-semibold text-indigo-800">
+              🌍 Globaler KI-Insight (alle Branchen)
+            </span>
             <span className="text-xs text-indigo-500">
-              {globalInsight.exampleCount} Nachrichten · {new Date(globalInsight.generatedAt).toLocaleDateString('de-AT')}
+              🕐 {new Date(globalInsight.generatedAt).toLocaleString('de-AT')} · {globalInsight.exampleCount} Nachrichten
             </span>
           </div>
-          <p className="text-sm text-indigo-700">{globalInsight.insight}</p>
+          <p className="text-sm text-indigo-700 leading-relaxed whitespace-pre-wrap">{globalInsight.insight}</p>
+          <div className="mt-3">
+            <button
+              onClick={() => triggerAnalysis(undefined)}
+              disabled={analyzing}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {analyzing ? '⏳ Analysiert...' : '🌍 Alle Branchen neu analysieren'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6 text-center">
+          <p className="text-sm text-gray-500 mb-2">Noch kein globaler Insight. Mindestens 2 Branchen mit Daten benötigt.</p>
+          <button
+            onClick={() => triggerAnalysis(undefined)}
+            disabled={analyzing}
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {analyzing ? '⏳ Analysiert...' : '🌍 Alle Branchen analysieren'}
+          </button>
         </div>
       )}
 
-      {/* Alle Branchen analysieren Button */}
-      <button
-        onClick={() => triggerAnalysis(undefined)}
-        disabled={analyzing}
-        className="mb-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-      >
-        {analyzing ? '⏳ Analysiert...' : '🌍 Alle Branchen analysieren (+ global)'}
-      </button>
-
-      {/* Globale Instruktionen */}
+      {/* 2. Globale KI-Instruktionen Textarea */}
       <div className="bg-white shadow-sm rounded-2xl p-6">
         <label className="text-sm font-semibold text-gray-800 mb-1 block">
           🌍 Globale KI-Instruktionen (für alle Branchen)
@@ -634,51 +649,69 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
         </button>
       </div>
 
-      {/* Branche auswählen */}
-      <div className="flex items-center gap-3">
-        <select
-          value={industry}
-          onChange={(e) => setIndustry(e.target.value as Industry)}
-          className="bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
-        >
-          {INDUSTRIES.map((i) => (
-            <option key={i.id} value={i.id}>{i.icon} {i.label}</option>
-          ))}
-        </select>
-        <span className="text-sm text-gray-600">KI-Instruktionen für {ind?.label}</span>
+      {/* 3. Separator */}
+      <div className="border-t border-gray-200" />
+
+      {/* 4. Branchen-Selector Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {INDUSTRIES.map((i) => (
+          <button
+            key={i.id}
+            onClick={() => setIndustry(i.id as Industry)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              industry === i.id
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {i.icon} {i.label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="text-center py-8 text-gray-500">Lade Einstellungen...</div>
       ) : (
         <div className="space-y-5">
-          {/* Insight Box */}
-          {insight && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-blue-800">📊 Branchen-Insight (auto-generiert)</span>
+          {/* 5. Branchen-Insight Box */}
+          {insight ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <span className="text-sm font-semibold text-blue-800">
+                  📊 KI-Lern-Insight ({selectedIndustryLabel})
+                </span>
                 <span className="text-xs text-blue-500">
-                  Letztes Update: {new Date(insight.generatedAt).toLocaleString('de-AT')}
-                  {insight.exampleCount > 0 && ` (${insight.exampleCount} Beispiele)`}
+                  🕐 {new Date(insight.generatedAt).toLocaleString('de-AT')} · {insight.exampleCount} Beispiele analysiert
                 </span>
               </div>
-              <p className="text-sm text-blue-700">{insight.insight}</p>
+              <p className="text-sm text-blue-700 leading-relaxed whitespace-pre-wrap">{insight.insight}</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => triggerAnalysis(industry)}
+                  disabled={analyzing}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {analyzing ? '⏳ Läuft...' : '🔄 Neu analysieren'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-center">
+              <p className="text-sm text-gray-500 mb-2">Noch kein Insight vorhanden.</p>
+              <button
+                onClick={() => triggerAnalysis(industry)}
+                disabled={analyzing}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+              >
+                {analyzing ? '⏳ Analysiert...' : '🔄 Jetzt analysieren'}
+              </button>
             </div>
           )}
 
-          {/* Einzelne Branche analysieren */}
-          <button
-            onClick={() => triggerAnalysis(industry)}
-            disabled={analyzing}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {analyzing ? '⏳ Analysiert...' : `🔄 ${ind?.label ?? industry} analysieren`}
-          </button>
-
-          {/* Branchenspezifische Zusatz-Instruktionen */}
+          {/* 6. Zusatz-Instruktionen Textarea (branchenspezifisch) */}
           <div className="bg-white shadow-sm rounded-2xl p-6">
             <label className="text-sm font-semibold text-gray-800 mb-1 block">
-              🧠 Zusatz-Instruktionen
+              🧠 Zusatz-Instruktionen ({selectedIndustryLabel})
             </label>
             <p className="text-xs text-gray-500 mb-3">
               Branchenspezifisches Wissen, Beispiele, spezielle Regeln, Tonalität etc.
@@ -695,6 +728,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
           {error && <p className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</p>}
           {success && <p className="text-green-700 text-sm bg-green-50 p-3 rounded-lg">✅ Gespeichert!</p>}
 
+          {/* 7. Speichern-Button */}
           <button
             onClick={handleSave}
             disabled={saving}
