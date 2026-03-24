@@ -139,27 +139,51 @@ export async function buildSystemPrompt(
     prompt += `\n\nAUSGABE-SCHEMA:\n${instructions.schema}`;
   }
 
-  // 4. Top Examples anhängen
+  // 4. Top + Bottom Beispiele als kontrastive Few-Shot Prompts anhängen
   if (examples.length > 0) {
-    prompt += `\n\nBEWÄHRTE BEISPIELE (nach Performance sortiert):\n`;
-    examples.forEach((ex, i) => {
-      prompt += `\nBeispiel ${i + 1} (Score: ${ex.score ?? 0}):\n`;
-      prompt += `Nachricht: "${ex.message}"\n`;
-      const pairs = ex.quickReplyPairs?.length
-        ? ex.quickReplyPairs
-        : (ex.quick_replies ?? []).map((btn, idx) => ({
-            button: btn,
-            autoResponse: ex.auto_responses?.[idx] ?? '',
-          }));
-      pairs.forEach((pair) => {
-        prompt += `Button: "${pair.button}" → Antwort: "${pair.autoResponse}"\n`;
+    // Alle Beispiele nach Score sortieren
+    const sortedExamples = [...examples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+    // Top 3
+    const topExamples = sortedExamples.slice(0, 3);
+    // Bottom 2 (nur wenn score vorhanden und deutlich schlechter)
+    const bottomExamples = sortedExamples.filter(e => (e.score ?? 0) < 50 && (e.stats?.sent ?? 0) > 0).slice(-2);
+
+    if (topExamples.length > 0) {
+      prompt += `\n\n<good_examples>\nDiese Nachrichten haben gut performt – lerne von ihrer Struktur:\n`;
+      topExamples.forEach((ex, i) => {
+        prompt += `\n<example index="${i + 1}" score="${ex.score ?? 0}">\n`;
+        prompt += `Anlass: ${ex.occasion}\n`;
+        prompt += `Nachricht: "${ex.message}"\n`;
+        const pairs = ex.quickReplyPairs?.length
+          ? ex.quickReplyPairs.filter(p => p.button)
+          : (ex.quick_replies ?? []).map((btn, idx) => ({
+              button: btn,
+              autoResponse: ex.auto_responses?.[idx] ?? '',
+            }));
+        pairs.forEach((p) => {
+          prompt += `Button: "${p.button}" → Antwort: "${p.autoResponse}"\n`;
+        });
+        prompt += `</example>\n`;
       });
-    });
+      prompt += `</good_examples>`;
+    }
+
+    if (bottomExamples.length > 0) {
+      prompt += `\n\n<bad_examples>\nDiese Nachrichten haben schlechter performt – vermeide ihre Fehler:\n`;
+      bottomExamples.forEach((ex, i) => {
+        prompt += `\n<example index="${i + 1}" score="${ex.score ?? 0}">\n`;
+        prompt += `Anlass: ${ex.occasion}\n`;
+        prompt += `Nachricht: "${ex.message}"\n`;
+        prompt += `</example>\n`;
+      });
+      prompt += `</bad_examples>`;
+    }
   }
 
-  // 5. Branchen-Insight anhängen
+  // 5. Branchen-Insight strukturiert anhängen
   if (insight?.insight) {
-    prompt += `\n\nAKTUELLE ERKENNTNISSE (automatisch analysiert):\n${insight.insight}`;
+    prompt += `\n\n<industry_insights>\n${insight.insight}\n</industry_insights>`;
   }
 
   // 6. JSON-Pflicht ans Ende setzen – wichtigste Position für Claude

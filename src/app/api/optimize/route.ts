@@ -102,9 +102,9 @@ export async function POST(req: NextRequest) {
 
     let systemPrompt = await buildSystemPrompt(industry, examples, instructions, globalInstructions, insight);
 
-    // Globalen Insight anhängen (auto-generiert, kein User-Override)
+    // Globalen Insight strukturiert anhängen (auto-generiert, kein User-Override)
     if (globalInsight?.insight) {
-      systemPrompt += `\n\nGLOBALE ERKENNTNISSE (branchenübergreifend):\n${globalInsight.insight}`;
+      systemPrompt += `\n\n<global_insights>\n${globalInsight.insight}\n</global_insights>`;
     }
 
     const client = new Anthropic({ apiKey });
@@ -137,18 +137,21 @@ export async function POST(req: NextRequest) {
       verkaufsstark: 'Verkaufsstark & überzeugend',
     };
 
-    const contextLines = [
-      `Optimiere diese WhatsApp-Nachricht für ${industryLabels[industry] ?? 'ein Unternehmen'}:`,
-      goal ? `ZIEL: ${goalLabels[goal] ?? goal}` : null,
-      tone ? `TON: ${toneLabels[tone] ?? tone}` : null,
-      `OPTIMIERE: "${message.trim()}"`,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    const goalLabel = goal ? goalLabels[goal] ?? goal : 'Engagement';
+    const toneLabel = tone ? `\nTon: ${toneLabels[tone] ?? tone}` : '';
 
     messages.push({
       role: 'user',
-      content: contextLines,
+      content: `<task>
+Erstelle eine optimierte WhatsApp-Nachricht für ${industryLabels[industry] ?? 'ein Unternehmen'}.
+Ziel: ${goalLabel}${toneLabel}
+</task>
+
+<input>
+${message.trim()}
+</input>
+
+Antworte ausschließlich mit validem JSON.`,
     });
 
     const response = await client.messages.create({

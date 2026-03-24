@@ -50,18 +50,21 @@ async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<stri
   }
   if (allExamples.length < 3) return;
 
-  // Top-Performer über alle Branchen
-  const topOverall = [...allExamples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 8);
+  // Top 5 + Bottom 3 über alle Branchen
+  const sorted = [...allExamples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const topOverall = sorted.slice(0, Math.min(5, Math.ceil(allExamples.length / 2)));
+  const bottomOverall = sorted.slice(-Math.min(3, Math.floor(allExamples.length / 2)));
 
-  const insightsSummary = validInsights.map(([ind, ins]) => `${ind}: ${ins}`).join('\n');
-  const topExamplesText = topOverall
-    .map((ex) => {
-      const sent = ex.stats?.sent ?? 0;
-      const openPct = sent > 0 ? Math.round(((ex.stats?.opened ?? 0) / sent) * 100) : '?';
-      const respPct = sent > 0 ? Math.round(((ex.stats?.responded ?? 0) / sent) * 100) : '?';
-      return `[${ex.industry}] Score ${ex.score ?? 0}: "${ex.message.substring(0, 80)}..." | Öffnung: ${openPct}% | Antwort: ${respPct}%`;
-    })
-    .join('\n');
+  const formatGlobalExample = (ex: ExampleWithIndustry, rank: string) => {
+    const sent = ex.stats?.sent ?? 0;
+    const openPct = sent > 0 ? Math.round(((ex.stats?.opened ?? 0) / sent) * 100) : '?';
+    const respPct = sent > 0 ? Math.round(((ex.stats?.responded ?? 0) / sent) * 100) : '?';
+    return `[${rank} | ${ex.industry}] Score: ${ex.score ?? 0} | Öffnung: ${openPct}% | Antwort: ${respPct}%
+Nachricht: "${ex.message.substring(0, 100)}"`;
+  };
+
+  const topText = topOverall.map((ex, i) => formatGlobalExample(ex, `TOP-${i + 1}`)).join('\n\n');
+  const bottomText = bottomOverall.map((ex, i) => formatGlobalExample(ex, `SCHWACH-${i + 1}`)).join('\n\n');
 
   // Lade bestehenden globalen Insight als Kontext
   const existingGlobalInsight = await getInsight('global');
@@ -73,17 +76,19 @@ async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<stri
     messages: [
       {
         role: 'user',
-        content: `Analysiere Top-Performer über alle Branchen hinweg.
+        content: `Analysiere WhatsApp-Nachrichten branchenübergreifend.
 
-${existingGlobalInsight?.insight ? `Bisheriger globaler Insight (NICHT wiederholen):\n"${existingGlobalInsight.insight}"\n\n` : ''}Branchen-Insights:
-${insightsSummary}
+<top_performers>
+${topText}
+</top_performers>
 
-Top-Nachrichten:
-${topExamplesText}
+<weak_performers>
+${bottomText}
+</weak_performers>
 
-Schreibe einen kompakten globalen Insight (max. 4 Punkte, max. 300 Zeichen):
-Welche Prinzipien gelten branchenübergreifend für WhatsApp-Nachrichten?
-Nur neue oder bestätigte Erkenntnisse, keine Wiederholungen.`,
+${existingGlobalInsight?.insight ? `<previous_global_insight>\n${existingGlobalInsight.insight}\n</previous_global_insight>\n\n` : ''}Nenne 4 universelle Prinzipien die branchenübergreifend den Unterschied machen.
+Für jedes Prinzip: was machen Top-Performer richtig, was machen Schwache falsch?
+Antworte kompakt, max. 4 Punkte.`,
       },
     ],
   }));
@@ -147,49 +152,65 @@ async function analyzeIndustries(
         continue;
       }
 
-      const top5 = [...withStats]
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-        .slice(0, 5);
+      // Alle Beispiele sortiert nach Score – Top + Bottom
+      const sorted = [...withStats].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      const topPerformers = sorted.slice(0, Math.min(5, Math.ceil(sorted.length / 2)));
+      const bottomPerformers = sorted.slice(-Math.min(3, Math.floor(sorted.length / 2)));
 
-      const examplesText = top5
-        .map((ex, i) => {
-          const sent = ex.stats.sent ?? 0;
-          const openPct = sent > 0 ? Math.round((ex.stats.opened / sent) * 100) : '?';
-          const respPct = sent > 0 ? Math.round((ex.stats.responded / sent) * 100) : '?';
+      const formatExample = (ex: typeof withStats[number], rank: string) => {
+        const sent = ex.stats.sent ?? 0;
+        const openPct = sent > 0 ? Math.round((ex.stats.opened / sent) * 100) : '?';
+        const respPct = sent > 0 ? Math.round((ex.stats.responded / sent) * 100) : '?';
+        const totalClicks = ex.quickReplyPairs?.reduce((s, p) => s + (p.clicks || 0), 0) || 0;
+        const buttonDist = totalClicks > 0
+          ? ex.quickReplyPairs?.map(p =>
+              `"${p.button}": ${Math.round((p.clicks || 0) / totalClicks * 100)}%`
+            ).join(', ')
+          : ex.quickReplyPairs?.map(p => `"${p.button}"`).join(', ') || 'keine';
+        return `[${rank}] Score: ${ex.score ?? 0} | Öffnung: ${openPct}% | Antwort: ${respPct}%
+Anlass: ${ex.occasion}
+Nachricht: "${ex.message}"
+Buttons: ${buttonDist}`;
+      };
 
-          const totalClicks = ex.quickReplyPairs?.reduce((s, p) => s + (p.clicks || 0), 0) || 0;
-          const buttonDistribution = totalClicks > 0
-            ? ex.quickReplyPairs?.map(p =>
-                `"${p.button}": ${Math.round((p.clicks || 0) / totalClicks * 100)}%`
-              ).join(', ')
-            : 'keine Klick-Daten';
-
-          return `Beispiel ${i + 1} (Score: ${ex.score ?? 0}):
-Nachricht: "${ex.message.substring(0, 100)}"
-Verschickt: ${sent} | Geöffnet: ${openPct}% | Beantwortet: ${respPct}%
-Button-Klick-Verteilung: ${buttonDistribution}`;
-        })
-        .join('\n\n');
+      const topText = topPerformers.map((ex, i) => formatExample(ex, `TOP-${i + 1}`)).join('\n\n');
+      const bottomText = bottomPerformers.map((ex, i) => formatExample(ex, `SCHWACH-${i + 1}`)).join('\n\n');
 
       // Lade bestehenden Insight als Kontext
       const existingInsight = await getInsight(industry);
 
       const response = await withRetry(() => client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 350,
-        system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und direkt. Keine Wiederholungen.',
+        max_tokens: 600,
+        system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch. Sei konkret und umsetzbar. Keine Wiederholungen.',
         messages: [
           {
             role: 'user',
-            content: `Analysiere diese ${top5.length} WhatsApp-Nachrichten für die Branche "${industry}".
+            content: `Analysiere diese WhatsApp-Nachrichten für die Branche "${industry}" nach 5 Dimensionen.
 
-${existingInsight?.insight ? `Bisheriger Insight (als Kontext, NICHT wiederholen):\n"${existingInsight.insight}"\n\n` : ''}Neue/aktualisierte Daten:
-${examplesText}
+${existingInsight?.insight ? `<previous_insight>\n${existingInsight.insight}\n</previous_insight>\n\nWichtig: Nicht wiederholen, nur neue oder bestätigte Erkenntnisse.\n\n` : ''}
+<top_performers>
+${topText}
+</top_performers>
 
-Schreibe einen kompakten, aktualisierten Insight (max. 4 Punkte, max. 300 Zeichen):
-- Was funktioniert gut (Button-Strategien, Tonalität, Struktur)?
-- Was sollte vermieden werden?
-Keine Wiederholung des bisherigen Insights. Nur neue oder bestätigte Erkenntnisse.`,
+<weak_performers>
+${bottomText}
+</weak_performers>
+
+Analysiere nach diesen 5 Dimensionen (jeweils 1 kurzer Satz):
+
+1. HOOK: Was haben die ersten 5-10 Zeichen der Top-Performer gemeinsam? Was fehlt den Schwachen?
+2. BUTTONS: Welche Button-Strategie hat die beste Klickverteilung? (Decoy/Segmentierung/Ja-Nein)
+3. LÄNGE & STRUKTUR: Optimale Zeichenzahl? Emoji-Position? Was unterscheidet Top vs. Schwach strukturell?
+4. TONALITÄT: Welche Wörter/Formulierungen dominieren bei Top-Performern, fehlen bei Schwachen?
+5. KONTEXT: Bei welchen Anlässen/Triggern performt welcher Stil am besten?
+
+Antworte im Format:
+HOOK: [Erkenntnis]
+BUTTONS: [Erkenntnis]
+LÄNGE: [Erkenntnis]
+TON: [Erkenntnis]
+KONTEXT: [Erkenntnis]`,
           },
         ],
       }));
