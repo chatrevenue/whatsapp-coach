@@ -71,7 +71,7 @@ Nachricht: "${ex.message.substring(0, 100)}"`;
 
   const response = await withRetry(() => client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 700,
+    max_tokens: 1200,
     system: `Du bist ein erfahrener WhatsApp Marketing Analyst. Du kennst Cialdinis Influence-Prinzipien, das Hormozi-Framework und psychologische Trigger (Neugier-Lücke, Verlust-Aversion, Decoy-Effekt, Knappheit, Reziprozität). Antworte auf Deutsch. Sei konkret und umsetzbar.`,
     messages: [
       {
