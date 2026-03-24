@@ -24,7 +24,7 @@ QUICK-REPLY REGELN:
 - Praktisch und klickbar
 
 AUTO-ANTWORTEN:
-Erstelle für jeden Button eine kurze, freundliche Auto-Antwort (1-2 Sätze), die der Kunde erhält, wenn er auf den Button tippt.
+Erstelle für jeden Button eine Auto-Antwort die der Kunde erhält wenn er tippt. Format: Kurze Begrüßung + Zeilenumbruch (\n) + 1-2 Sätze mit Details/CTA. Nutze \n für Absätze. Kein Fließtext.
 
 AUSGABE IMMER als valides JSON:
 {
@@ -56,7 +56,7 @@ QUICK-REPLY REGELN:
 - Typisch: "Tisch reservieren", "Menü ansehen", "Mehr Infos"
 
 AUTO-ANTWORTEN:
-Erstelle für jeden Button eine kurze, freundliche Auto-Antwort (1-2 Sätze), die der Kunde erhält, wenn er auf den Button tippt.
+Erstelle für jeden Button eine Auto-Antwort die der Kunde erhält wenn er tippt. Format: Kurze Begrüßung + Zeilenumbruch (\n) + 1-2 Sätze mit Details/CTA. Nutze \n für Absätze. Kein Fließtext.
 
 AUSGABE IMMER als valides JSON:
 {
@@ -83,7 +83,7 @@ FRAMEWORK:
 4. CTA
 
 AUTO-ANTWORTEN:
-Erstelle für jeden Button eine kurze, motivierende Auto-Antwort (1-2 Sätze), die der Kunde erhält, wenn er auf den Button tippt.
+Erstelle für jeden Button eine Auto-Antwort die der Kunde erhält wenn er tippt. Format: Kurze Begrüßung + Zeilenumbruch (\n) + 1-2 Sätze mit Details/CTA. Nutze \n für Absätze. Kein Fließtext.
 
 AUSGABE IMMER als valides JSON:
 {
@@ -103,7 +103,7 @@ Optimiere die Nachricht nach universellen Best Practices:
 - Passende Emojis
 
 AUTO-ANTWORTEN:
-Erstelle für jeden Button eine kurze, freundliche Auto-Antwort (1-2 Sätze), die der Kunde erhält, wenn er auf den Button tippt.
+Erstelle für jeden Button eine Auto-Antwort die der Kunde erhält wenn er tippt. Format: Kurze Begrüßung + Zeilenumbruch (\n) + 1-2 Sätze mit Details/CTA. Nutze \n für Absätze. Kein Fließtext.
 
 AUSGABE IMMER als valides JSON:
 {
@@ -189,7 +189,8 @@ export async function buildSystemPrompt(
 
   // 6. JSON-Pflicht ans Ende setzen – wichtigste Position für Claude
   prompt += `\n\n⚠️ PFLICHT: Antworte AUSSCHLIESSLICH mit validem JSON. Kein Text davor oder danach. Kein Markdown. Nur dieses Format:
-{"optimized_message":"...","quick_replies":["...","...","..."],"auto_responses":["...","...","..."],"tip":"..."}`;
+{"optimized_message":"...","quick_replies":["...","...","..."],"auto_responses":["Hallo! 😊\\n\\nDetails hier...","Antwort 2\\n\\nMehr Info...","Antwort 3..."],"tip":"..."}
+WICHTIG für auto_responses: Nutze \\n für Zeilenumbrüche innerhalb der Antwort. Format: Kurze Begrüßung + \\n\\n + Details/CTA.`;
 
   return prompt;
 }
