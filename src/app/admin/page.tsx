@@ -186,12 +186,14 @@ function ExampleModal({
       if (initial) {
         res = await fetch(`/api/examples/${initial.id}`, {
           method: 'PUT',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
           body: JSON.stringify(payload),
         });
       } else {
         res = await fetch('/api/examples', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
           body: JSON.stringify(payload),
         });
@@ -502,6 +504,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     try {
       const res = await fetch('/api/instructions', {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
         body: JSON.stringify({ industry, schema: '', additionalInstructions }),
       });
@@ -525,6 +528,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     try {
       const res = await fetch('/api/instructions/global', {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
         body: JSON.stringify({ additionalInstructions: globalInstructions }),
       });
@@ -550,6 +554,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
       const res = await fetch('/api/cron/analyze', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
         body: JSON.stringify(body),
       });
@@ -787,6 +792,7 @@ export default function AdminPage() {
       const results = await Promise.all(
         industries.map((i) =>
           fetch(`/api/examples?industry=${i}&limit=50`, {
+            credentials: 'include',
             headers: { 'x-admin-password': pw },
           }).then((r) => r.json())
         )
@@ -827,6 +833,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/examples/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: { 'x-admin-password': adminPw },
       });
       if (res.ok) {
