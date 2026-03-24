@@ -53,7 +53,9 @@ async function analyzeGlobal(client: Anthropic, perIndustryInsights: Record<stri
   // Top 5 + Bottom 3 über alle Branchen
   const sorted = [...allExamples].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   const topOverall = sorted.slice(0, Math.min(5, Math.ceil(allExamples.length / 2)));
-  const bottomOverall = sorted.slice(-Math.min(3, Math.floor(allExamples.length / 2)));
+  const topIds = new Set(topOverall.map(e => e.id));
+  const bottomCandidates = sorted.filter(e => !topIds.has(e.id));
+  const bottomOverall = bottomCandidates.slice(-Math.min(3, bottomCandidates.length));
 
   const formatGlobalExample = (ex: ExampleWithIndustry, rank: string) => {
     const sent = ex.stats?.sent ?? 0;
@@ -162,7 +164,9 @@ async function analyzeIndustries(
       // Alle Beispiele sortiert nach Score – Top + Bottom
       const sorted = [...withStats].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
       const topPerformers = sorted.slice(0, Math.min(5, Math.ceil(sorted.length / 2)));
-      const bottomPerformers = sorted.slice(-Math.min(3, Math.floor(sorted.length / 2)));
+      const topIds = new Set(topPerformers.map(e => e.id));
+      const bottomCandidates = sorted.filter(e => !topIds.has(e.id));
+      const bottomPerformers = bottomCandidates.slice(-Math.min(3, bottomCandidates.length));
 
       const formatExample = (ex: typeof withStats[number], rank: string) => {
         const sent = ex.stats.sent ?? 0;

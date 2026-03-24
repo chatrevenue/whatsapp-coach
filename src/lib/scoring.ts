@@ -21,5 +21,5 @@ export function getScoreLabel(score: number): { label: string; color: string } {
   if (score >= 60) return { label: '✅ Gut', color: 'text-blue-600' };
   if (score >= 40) return { label: '⚠️ Mittel', color: 'text-yellow-600' };
   if (score > 0)   return { label: '❌ Schwach', color: 'text-red-600' };
-  return { label: '— Kein Datum', color: 'text-gray-400' };
+  return { label: '— Keine Daten', color: 'text-gray-400' };
 }

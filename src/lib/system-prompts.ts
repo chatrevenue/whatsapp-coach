@@ -146,8 +146,9 @@ export async function buildSystemPrompt(
 
     // Top 3
     const topExamples = sortedExamples.slice(0, 3);
-    // Bottom 2 (nur wenn score vorhanden und deutlich schlechter)
-    const bottomExamples = sortedExamples.filter(e => (e.score ?? 0) < 50 && (e.stats?.sent ?? 0) > 0).slice(-2);
+    // Bottom 2 (nur wenn score vorhanden und deutlich schlechter, und nicht schon in Top)
+    const topIds = new Set(topExamples.map(e => e.id));
+    const bottomExamples = sortedExamples.filter(e => !topIds.has(e.id) && (e.score ?? 0) < 50 && (e.stats?.sent ?? 0) > 0).slice(-2);
 
     if (topExamples.length > 0) {
       prompt += `\n\n<good_examples>\nDiese Nachrichten haben gut performt – lerne von ihrer Struktur:\n`;

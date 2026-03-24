@@ -24,6 +24,7 @@ function AuthGate({ onAuth }: { onAuth: (pw: string) => void }) {
     try {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pw.trim() }),
       });
@@ -439,7 +440,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
   // Load global instructions once on mount
   const loadGlobalInstructions = useCallback(async () => {
     try {
-      const res = await fetch('/api/instructions/global');
+      const res = await fetch('/api/instructions/global', { credentials: 'include' });
       const data = await res.json() as { instructions?: GlobalInstructions | null };
       setGlobalInstructions(data.instructions?.additionalInstructions ?? '');
     } catch {
@@ -450,7 +451,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
   // Load global cross-industry insight on mount
   const loadGlobalInsight = useCallback(async () => {
     try {
-      const res = await fetch('/api/insights?industry=global');
+      const res = await fetch('/api/insights?industry=global', { credentials: 'include' });
       const data = await res.json() as { insight?: IndustryInsight | null };
       setGlobalInsight(data.insight ?? null);
     } catch {
@@ -462,7 +463,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
     setLoading(true);
     setError('');
     try {
-      const instrRes = await fetch(`/api/instructions?industry=${ind}`);
+      const instrRes = await fetch(`/api/instructions?industry=${ind}`, { credentials: 'include' });
       const instrData = await instrRes.json() as { instructions?: IndustryInstructions | null };
       if (instrData.instructions) {
         setAdditionalInstructions(instrData.instructions.additionalInstructions ?? '');
@@ -479,7 +480,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
   // Load insight for selected industry from the insights endpoint
   const loadInsight = useCallback(async (ind: Industry) => {
     try {
-      const res = await fetch(`/api/insights?industry=${ind}`);
+      const res = await fetch(`/api/insights?industry=${ind}`, { credentials: 'include' });
       const data = await res.json() as { insight?: IndustryInsight | null };
       setInsight(data.insight ?? null);
     } catch {
@@ -563,7 +564,7 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
 
       if (ind) {
         // Einzelne Branche → Insight nachladen
-        const insightRes = await fetch(`/api/insights?industry=${ind}`);
+        const insightRes = await fetch(`/api/insights?industry=${ind}`, { credentials: 'include' });
         const insightData = await insightRes.json() as { insight?: IndustryInsight | null };
         if (insightData.insight) {
           setInsight(insightData.insight);
@@ -573,8 +574,8 @@ function AISettingsTab({ adminPw }: { adminPw: string }) {
       } else {
         // Alle Branchen + global → beide nachladen
         const [insightRes, globalInsightRes] = await Promise.all([
-          fetch(`/api/insights?industry=${industry}`),
-          fetch('/api/insights?industry=global'),
+          fetch(`/api/insights?industry=${industry}`, { credentials: 'include' }),
+          fetch('/api/insights?industry=global', { credentials: 'include' }),
         ]);
         const insightData = await insightRes.json() as { insight?: IndustryInsight | null };
         const globalInsightData = await globalInsightRes.json() as { insight?: IndustryInsight | null };
@@ -768,7 +769,7 @@ export default function AdminPage() {
   // adminPw bleibt leer – API routes now also accept the session cookie
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/admin/session')
+    fetch('/api/admin/session', { credentials: 'include' })
       .then((r) => r.json())
       .then((d: { authenticated?: boolean }) => {
         if (!cancelled && d.authenticated) {
@@ -815,7 +816,7 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/auth', { method: 'DELETE' });
+      await fetch('/api/admin/auth', { method: 'DELETE', credentials: 'include' });
     } catch {
       // ignore
     }
