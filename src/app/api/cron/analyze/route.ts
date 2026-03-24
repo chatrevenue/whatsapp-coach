@@ -71,12 +71,12 @@ Nachricht: "${ex.message.substring(0, 100)}"`;
 
   const response = await withRetry(() => client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 400,
-    system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch, knapp und umsetzbar. Keine Wiederholungen.',
+    max_tokens: 700,
+    system: `Du bist ein erfahrener WhatsApp Marketing Analyst. Du kennst Cialdinis Influence-Prinzipien, das Hormozi-Framework und psychologische Trigger (Neugier-Lücke, Verlust-Aversion, Decoy-Effekt, Knappheit, Reziprozität). Antworte auf Deutsch. Sei konkret und umsetzbar.`,
     messages: [
       {
         role: 'user',
-        content: `Analysiere WhatsApp-Nachrichten branchenübergreifend.
+        content: `Analysiere diese WhatsApp-Nachrichten aus verschiedenen Branchen und finde universelle Muster.
 
 <top_performers>
 ${topText}
@@ -86,9 +86,16 @@ ${topText}
 ${bottomText}
 </weak_performers>
 
-${existingGlobalInsight?.insight ? `<previous_global_insight>\n${existingGlobalInsight.insight}\n</previous_global_insight>\n\n` : ''}Nenne 4 universelle Prinzipien die branchenübergreifend den Unterschied machen.
-Für jedes Prinzip: was machen Top-Performer richtig, was machen Schwache falsch?
-Antworte kompakt, max. 4 Punkte.`,
+${existingGlobalInsight?.insight ? `<previous_global_insight>\n${existingGlobalInsight.insight}\n</previous_global_insight>\n\nWichtig: Nicht wiederholen, nur neue oder bestätigte Erkenntnisse.\n\n` : ''}Denke zuerst still durch: Was funktioniert branchenübergreifend bei den Top-Performern, was nicht bei den Schwachen?
+
+Nenne dann 5 universelle Prinzipien die branchenübergreifend den Unterschied machen:
+- Welche psychologischen Trigger (Cialdini/Hormozi) setzten Top-Performer ein?
+- Was für Hook-Muster wiederholen sich?
+- Welche Button-Strategien funktionieren überall?
+- Was vermeiden Top-Performer konsequent?
+- Welche Tonalität gewinnt immer?
+
+Format: 5 nummerierte Punkte, je 1-2 Sätze, konkret und umsetzbar.`,
       },
     ],
   }));
@@ -181,12 +188,12 @@ Buttons: ${buttonDist}`;
 
       const response = await withRetry(() => client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 600,
-        system: 'Du bist ein WhatsApp Marketing Analyst. Antworte auf Deutsch. Sei konkret und umsetzbar. Keine Wiederholungen.',
+        max_tokens: 900,
+        system: `Du bist ein erfahrener WhatsApp Marketing Analyst und Copywriting-Experte. Du kennst Cialdinis Influence-Prinzipien (Knappheit, Reziprozität, Social Proof, Autorität, Sympathie, Dringlichkeit), das Hormozi-Framework (Hook/Agitation/Solution/CTA) und psychologische Trigger (Neugier-Lücke, Verlust-Aversion, Decoy-Effekt). Antworte auf Deutsch. Sei konkret, direkt und umsetzbar.`,
         messages: [
           {
             role: 'user',
-            content: `Analysiere diese WhatsApp-Nachrichten für die Branche "${industry}" nach 5 Dimensionen.
+            content: `Analysiere diese WhatsApp-Nachrichten für die Branche "${industry}".
 
 ${existingInsight?.insight ? `<previous_insight>\n${existingInsight.insight}\n</previous_insight>\n\nWichtig: Nicht wiederholen, nur neue oder bestätigte Erkenntnisse.\n\n` : ''}
 <top_performers>
@@ -197,19 +204,21 @@ ${topText}
 ${bottomText}
 </weak_performers>
 
-Analysiere nach diesen 5 Dimensionen (jeweils 1 kurzer Satz):
+Denke zuerst still durch: Was fällt dir beim Vergleich Top vs. Schwach sofort auf? Dann analysiere nach diesen 6 Dimensionen (je 1 konkreter Satz, immer Top vs. Schwach vergleichen):
 
-1. HOOK: Was haben die ersten 5-10 Zeichen der Top-Performer gemeinsam? Was fehlt den Schwachen?
-2. BUTTONS: Welche Button-Strategie hat die beste Klickverteilung? (Decoy/Segmentierung/Ja-Nein)
-3. LÄNGE & STRUKTUR: Optimale Zeichenzahl? Emoji-Position? Was unterscheidet Top vs. Schwach strukturell?
-4. TONALITÄT: Welche Wörter/Formulierungen dominieren bei Top-Performern, fehlen bei Schwachen?
-5. KONTEXT: Bei welchen Anlässen/Triggern performt welcher Stil am besten?
+1. HOOK: Was haben die ersten 5-10 Zeichen der Top-Performer gemeinsam – Frage, Emoji, Name, Zahl oder Neugier-Lücke? Was fehlt den Schwachen?
+2. BUTTONS: Welche Button-Strategie hatte die beste Klickverteilung – Decoy, Segmentierung (Dabei/Kann nicht/Nein) oder Ja-Nein? Was fehlte den Schwachen?
+3. LÄNGE & STRUKTUR: Optimale Zeichenzahl für diese Branche? Wo stehen Emojis? Was unterscheidet Top und Schwach strukturell?
+4. TONALITÄT: Welche konkreten Wörter dominieren bei Top-Performern, fehlen bei Schwachen – persönlich/direkt oder formell/werblich?
+5. PSYCHOLOGIE: Welche Cialdini-Trigger setzten Top-Performer ein – Knappheit, Neugier-Lücke, Reziprozität, Verlust-Aversion, Decoy? Was fehlte den Schwachen?
+6. KONTEXT: Bei welchen Anlässen oder Triggern performt welcher Stil am besten für diese Branche?
 
 Antworte im Format:
 HOOK: [Erkenntnis]
 BUTTONS: [Erkenntnis]
 LÄNGE: [Erkenntnis]
 TON: [Erkenntnis]
+PSYCHOLOGIE: [Erkenntnis]
 KONTEXT: [Erkenntnis]`,
           },
         ],
