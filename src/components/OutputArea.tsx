@@ -115,14 +115,18 @@ export default function OutputArea({
 
           {!isLoading && result && (
             <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Outgoing bubble – optimized message */}
+              {/* Outgoing bubble – optimized message + Copy Button */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '8px' }}>
+                {/* Copy Button direkt bei der Bubble */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <CopyButton text={result.optimized_message} label="Kopieren" />
+                </div>
                 <div style={{
                   background: '#25D366',
                   color: 'white',
                   borderRadius: '16px 16px 4px 16px',
                   padding: '16px',
-                  maxWidth: '85%',
+                  maxWidth: '75%',
                   fontSize: '14px',
                   lineHeight: 1.6,
                   whiteSpace: 'pre-wrap',
@@ -172,15 +176,33 @@ export default function OutputArea({
                         </span>
                         <CopyButton text={reply} label="" />
                       </div>
-                      {/* Auto response */}
+                      {/* Auto response – als eingehende Chat-Bubble formatiert */}
                       {result.auto_responses && result.auto_responses[i] && (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                          <span style={{ fontSize: '12px', color: '#6B9E6B', flexShrink: 0, marginTop: '2px' }}>↳</span>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: '12px', color: '#6B9E6B', fontWeight: 500, marginBottom: '4px' }}>Automatische Antwort:</p>
-                            <p style={{ fontSize: '13px', color: '#1A2E1A', lineHeight: 1.5 }}>{result.auto_responses[i]}</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <p style={{ fontSize: '11px', color: '#888', paddingLeft: '4px' }}>↳ Automatische Antwort wenn Kunde klickt:</p>
+                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              background: '#E8F5E9', display: 'flex', alignItems: 'center',
+                              justifyContent: 'center', fontSize: '13px', flexShrink: 0,
+                            }}>🤖</div>
+                            <div style={{
+                              background: 'white',
+                              color: '#1A2E1A',
+                              borderRadius: '16px 16px 16px 4px',
+                              padding: '12px 14px',
+                              maxWidth: '85%',
+                              fontSize: '13px',
+                              lineHeight: 1.6,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              border: '1px solid #E0E8E0',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                            }}>
+                              {result.auto_responses[i]}
+                            </div>
+                            <CopyButton text={result.auto_responses[i]} label="" />
                           </div>
-                          <CopyButton text={result.auto_responses[i]} label="" />
                         </div>
                       )}
                     </div>
