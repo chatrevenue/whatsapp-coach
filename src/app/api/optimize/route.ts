@@ -198,14 +198,29 @@ Antworte ausschließlich mit validem JSON.`,
         // Clean common JSON issues from LLMs
         jsonStr = jsonStr
           .replace(/,\s*}/g, '}')     // trailing commas before }
-          .replace(/,\s*]/g, ']')     // trailing commas before ]
-          .replace(/[\x00-\x1f]/g, (c) => c === '\n' ? '\\n' : c === '\t' ? '\\t' : ''); // control chars
+          .replace(/,\s*]/g, ']');    // trailing commas before ]
 
-        parsed = JSON.parse(jsonStr);
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          // Last resort: fix unescaped newlines inside string values
+          // Replace literal newlines that are inside JSON strings with \\n
+          jsonStr = jsonStr.replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
+          parsed = JSON.parse(jsonStr);
+        }
       }
     } catch (parseErr) {
       console.error('[/api/optimize] JSON parse failed. Raw text:', rawText.substring(0, 500));
-      throw new Error('KI hat kein gültiges JSON zurückgegeben. Bitte nochmal versuchen.');
+      // Return a fallback response instead of throwing
+      return NextResponse.json(
+        {
+          optimized_message: rawText.substring(0, 500),
+          quick_replies: ['Mehr Info', 'Termin buchen', 'Danke'],
+          auto_responses: [],
+          tip: 'Die KI-Antwort konnte nicht vollständig verarbeitet werden. Der Rohtext wird angezeigt.',
+        },
+        { headers: corsHeaders(origin) }
+      );
     }
 
     if (
