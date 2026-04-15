@@ -155,9 +155,9 @@ Antworte ausschließlich mit validem JSON.`,
     });
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      temperature: 0.7,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 800,
+      temperature: 0.5,
       system: systemPrompt,
       messages,
     });
@@ -171,11 +171,40 @@ Antworte ausschließlich mit validem JSON.`,
 
     let parsed: OptimizeResponse;
     try {
-      const jsonMatch =
-        rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText;
-      parsed = JSON.parse(jsonStr);
-    } catch {
+      // Try multiple extraction strategies:
+      // 1. Direct JSON parse
+      // 2. Extract from ```json ... ``` code block
+      // 3. Extract first { ... } block (greedy)
+      // 4. Extract with relaxed matching (handles trailing commas, etc.)
+      let jsonStr = rawText;
+
+      // Strategy 1: direct parse
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // Strategy 2: code block
+        const codeBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1].trim();
+        } else {
+          // Strategy 3: find outermost { ... }
+          const firstBrace = rawText.indexOf('{');
+          const lastBrace = rawText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace > firstBrace) {
+            jsonStr = rawText.substring(firstBrace, lastBrace + 1);
+          }
+        }
+
+        // Clean common JSON issues from LLMs
+        jsonStr = jsonStr
+          .replace(/,\s*}/g, '}')     // trailing commas before }
+          .replace(/,\s*]/g, ']')     // trailing commas before ]
+          .replace(/[\x00-\x1f]/g, (c) => c === '\n' ? '\\n' : c === '\t' ? '\\t' : ''); // control chars
+
+        parsed = JSON.parse(jsonStr);
+      }
+    } catch (parseErr) {
+      console.error('[/api/optimize] JSON parse failed. Raw text:', rawText.substring(0, 500));
       throw new Error('KI hat kein gültiges JSON zurückgegeben. Bitte nochmal versuchen.');
     }
 
@@ -184,7 +213,16 @@ Antworte ausschließlich mit validem JSON.`,
       !Array.isArray(parsed.quick_replies) ||
       typeof parsed.tip !== 'string'
     ) {
-      throw new Error('Unvollständige Antwort von der KI. Bitte nochmal versuchen.');
+      // Try to salvage partial responses
+      if (typeof parsed.optimized_message !== 'string' && typeof (parsed as Record<string, unknown>).message === 'string') {
+        parsed.optimized_message = (parsed as Record<string, unknown>).message as string;
+      }
+      if (!Array.isArray(parsed.quick_replies)) {
+        parsed.quick_replies = ['Mehr Info', 'Termin buchen', 'Danke'];
+      }
+      if (typeof parsed.tip !== 'string') {
+        parsed.tip = 'Optimierte Version mit klarem CTA und persönlichem Ton.';
+      }
     }
 
     const quickReplies = parsed.quick_replies
