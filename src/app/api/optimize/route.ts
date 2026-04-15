@@ -214,8 +214,8 @@ Antworte ausschließlich mit validem JSON.`,
       typeof parsed.tip !== 'string'
     ) {
       // Try to salvage partial responses
-      if (typeof parsed.optimized_message !== 'string' && typeof (parsed as Record<string, unknown>).message === 'string') {
-        parsed.optimized_message = (parsed as Record<string, unknown>).message as string;
+      if (typeof parsed.optimized_message !== 'string' && typeof (parsed as unknown as Record<string, unknown>).message === 'string') {
+        parsed.optimized_message = (parsed as unknown as Record<string, unknown>).message as string;
       }
       if (!Array.isArray(parsed.quick_replies)) {
         parsed.quick_replies = ['Mehr Info', 'Termin buchen', 'Danke'];
